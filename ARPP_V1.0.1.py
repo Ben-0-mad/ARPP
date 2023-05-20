@@ -95,11 +95,11 @@ class ARPP(object):
             if answer < len(iflist):
                 self.SELECTED_INTERFACE=iflist[answer]
             else:
-                print("Interface does not exist")
+                print("Interface does not exist\n")
         elif answer in iflist:
             self.SELECTED_INTERFACE = answer
         else:
-            print("Interface does not exist")
+            print("Interface does not exist\n")
     
     def get_network_users_ARPSCAN(self):
         """
@@ -117,8 +117,8 @@ class ARPP(object):
         for i, user in enumerate(network_devices, start=1):
             print("{}          {}".format(user[1].psrc, user[1].hwsrc))
         
-        print(network_devices)
-        if network_devices is []:
+        #print(network_devices)
+        if network_devices == []:
             print("No network devices found\n")
         
     def ARP_poison(self, ipVictim, ipToSpoof):
@@ -161,13 +161,13 @@ class ARPP(object):
                 task = self.TASK_DICT[task_name]
                 task()
             except IndexError:
-                print("Command not found")
+                print("Command not found\n")
         else:
             try:
                 task = self.TASK_DICT[command]
                 task()
             except:
-                print("Command not found")
+                print("Command not found\n")
 
     def CLI(self):
         try:
