@@ -82,9 +82,12 @@ class ARPP(object):
         for i, _ in enumerate(iflist, start=0):
             print("{}: {}".format(i,_))
         
-        answer = None
-        while answer not in iflist:
-            answer = str(input("select interface>>"))
+        answer - None
+        while answer is None:
+            try:
+                answer = str(input("select interface>>"))
+            except:
+                answer = None
             
         if self._represents_int(answer):
             if int(answer)<len(iflist):
