@@ -35,6 +35,7 @@ class ARPP(object):
         self.SELECTED_INTERFACE = None
         self.TASK_DICT = {"Help":parser.print_help,\
             "Scan local network for users":self.get_network_users_ARPSCAN,\
+            "This menu":self.print_menu,\
             "ARP poison":self.ARP_poison,\
             "exit":quit,\
             "select interface":self.select_interface}
