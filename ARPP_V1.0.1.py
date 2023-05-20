@@ -113,7 +113,7 @@ class ARPP(object):
             self.select_interface()
         print("Selected Interface: {}".format(self.SELECTED_INTERFACE))
             
-        network_devices = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
+        network_devices = srp(request, timeout=10, verbose=1)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
         for i, user in enumerate(network_devices, start=1):
             print("{}          {}".format(user[1].psrc, user[1].hwsrc))
         
