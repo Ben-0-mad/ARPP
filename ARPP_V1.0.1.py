@@ -114,8 +114,8 @@ class ARPP(object):
             
         network_devices = srp(request, timeout=10, verbose=0, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
         for i, user in enumerate(network_devices, start=1):
-            #print(f"{i}: {user}\n")
             print("{}          {}".format(user[1].psrc, user[1].hwsrc))
+            
         if network_devices is []:
             print("No network devices found\n")
         
