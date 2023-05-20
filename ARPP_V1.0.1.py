@@ -90,7 +90,8 @@ class ARPP(object):
                 answer = None
             
         if self._represents_int(answer):
-            if int(answer)<len(iflist):
+            answer = int(answer)
+            if answer < len(iflist):
                 self.SELECTED_INTERFACE=iflist[answer]
             else:
                 print("Interface does not exist")
@@ -166,8 +167,12 @@ class ARPP(object):
                 print("Command not found")
 
     def CLI(self):
-        command = str(input(">>"))
-        self.parse_command(command=command)
+        try:
+            command = input(">>")
+            command = str(command)
+            self.parse_command(command=command)
+        except:
+            pass
 
 def main():
     cl = ARPP()
