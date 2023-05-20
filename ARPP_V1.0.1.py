@@ -82,7 +82,7 @@ class ARPP(object):
         for i, _ in enumerate(iflist, start=0):
             print("{}: {}".format(i,_))
         
-        answer - None
+        answer = None
         while answer is None:
             try:
                 answer = str(input("select interface>>"))
