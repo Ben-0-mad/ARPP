@@ -33,10 +33,10 @@ def print_banner():
 class ARPP(object):
     def __init__(self):
         self.SELECTED_INTERFACE = None
-        self.TASK_DICT = {"Help":parser.print_help,\
-            "Scan local network for users":self.get_network_users_ARPSCAN,\
-            "This menu":self.print_menu,\
-            "ARP poison":self.ARP_poison,\
+        self.TASK_DICT = {"help":parser.print_help,\
+            "scan local network for users":self.get_network_users_ARPSCAN,\
+            "menu":self.print_menu,\
+            "arp poison":self.ARP_poison,\
             "exit":quit,\
             "select interface":self.select_interface}
     
@@ -172,7 +172,7 @@ class ARPP(object):
     def CLI(self):
         try:
             command = input(">>")
-            command = str(command)
+            command = str(command).lower()
             self.parse_command(command=command)
         except SyntaxError:
             pass
