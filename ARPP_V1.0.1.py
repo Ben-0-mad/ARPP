@@ -195,7 +195,7 @@ class ARPP(object):
             try:
                 task = self.TASK_DICT[command]
                 task()
-            except:
+            except KeyError:
                 print("Command not found\n")
 
     def CLI(self):
