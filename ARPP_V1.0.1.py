@@ -58,10 +58,10 @@ class ARPP(object):
             
     
     def _get_mac_from_ip(self, ip):
-        arp_request = scapy.ARP(pdst=ip)
-        broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
+        arp_request = ARP(pdst=ip)
+        broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
         pkt = broadcast / arp_request
-        answ = scapy.srp(pkt, timeout=1, verbose=False)[0]
+        answ = srp(pkt, timeout=1, verbose=False)[0]
         return answ[0][1].hwsrc
 
     def _represents_int(self, i):
