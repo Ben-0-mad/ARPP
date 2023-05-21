@@ -165,8 +165,6 @@ class ARPP(object):
         while not self._is_valid_ip(ipVictim):
             try:
                 ipVictim = str(input("ip of victim>>"))
-                print(ipVictim)
-                print("Input ip is {}".format(self._is_valid_ip(ipVictim)))
             except SyntaxError:
                 pass
         
@@ -213,7 +211,7 @@ class ARPP(object):
 
     def CLI(self):
         try:
-            command = raw_input(">>")
+            command = input(">>") #rawrawrawsputin
             command = str(command).lower()
             self.parse_command(command=command)
         except SyntaxError:
