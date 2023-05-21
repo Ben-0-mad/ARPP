@@ -2,6 +2,7 @@ from scapy.all import *
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
 import argparse
 from time import sleep
+import re # regex for ip validation
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -64,6 +65,19 @@ class ARPP(object):
             return False
         else:
             return True
+    
+    def _is_valid_ip(self, ip):
+        regex_ipv4 = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.)\{3\}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
+        regex_ipv6 = "((([0-9a-fA-F]){1,4})\\:){7}([0-9a-fA-F]){1,4}"
+    
+        ip_v4 = re.compile(regex_ipv4)
+        ip_v6 = re.compile(regex_ipv6)
+    
+        if (re.search(ip_v4, ip)):
+            return True
+        elif (re.search(ip_v6,ip)):
+            return True
+        return False
 
     def print_menu(self):
         task_names = self.TASK_DICT.keys()
@@ -121,7 +135,7 @@ class ARPP(object):
         if network_devices == []:
             print("No network devices found\n")
         
-    def ARP_poison(self, ipVictim, ipToSpoof):
+    def ARP_poison(self):
         """
         Victim's arp table will contain the entry
         ----------
@@ -134,6 +148,21 @@ class ARPP(object):
             ipVictim (str): _description_
             ipToSpoof (str): _description_
         """
+        ipVictim = ""
+        ipToSpoof = ""
+        
+        while not self._is_valid_ip(ipVictim):
+            try:
+                ipVictim = input("ip of victim>>")
+            except SyntaxError:
+                pass
+        
+        print("The ip to spoof is the ip you want your mac address to be associated to in the victim's arp table")
+        while not self._is_valid_ip(ipToSpoof):
+            try:
+                ipToSpoof = input("ip to spoof>>")
+            except SyntaxError:
+                pass
         
         macVictim = self._get_mac_from_ip(ipVictim)
         macAttacker = self._get_my_mac()
