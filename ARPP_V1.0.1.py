@@ -119,12 +119,13 @@ class ARPP(object):
         """
         ARP ping scan
         """
+        while self.SELECTED_INTERFACE is None:
+            self.select_interface()
+        
         ip_range = self.get_ip_range()
         request = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range) #dst="ff:ff:..." means all devices on the network will receive this packet.
         print("Scanning devices connected to network, please wait...")
         
-        while self.SELECTED_INTERFACE is None:
-            self.select_interface()
         print("Selected Interface: {}".format(self.SELECTED_INTERFACE))
             
         network_devices = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
