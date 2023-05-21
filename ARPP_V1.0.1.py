@@ -189,14 +189,15 @@ class ARPP(object):
                 task_name = self.TASK_DICT.keys()[command]
                 task = self.TASK_DICT[task_name]
                 task()
-            except IndexError:
+            except IndexError as e:
                 print("Command not found\n")
+                print(e.__traceback__)
         else:
             try:
                 task = self.TASK_DICT[command]
                 task()
             except KeyError as e:
-                print(e)
+                print(e.__traceback__)
                 #print("Command not found\n")
 
     def CLI(self):
