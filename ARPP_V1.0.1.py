@@ -153,14 +153,14 @@ class ARPP(object):
         
         while not self._is_valid_ip(ipVictim):
             try:
-                ipVictim = input("ip of victim>>")
+                ipVictim = str(input("ip of victim>>"))
             except SyntaxError:
                 pass
         
         print("The ip to spoof is the ip you want your mac address to be associated to in the victim's arp table")
         while not self._is_valid_ip(ipToSpoof):
             try:
-                ipToSpoof = input("ip to spoof>>")
+                ipToSpoof = str(input("ip to spoof>>"))
             except SyntaxError:
                 pass
         
