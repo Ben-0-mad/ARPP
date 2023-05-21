@@ -3,6 +3,7 @@ from scapy.all import *
 import argparse
 from time import sleep
 import re # regex for ip validation
+import sys
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -30,6 +31,11 @@ def print_banner():
                   By group 21  
     """
     print(banner)
+
+if sys.version_info[0] >= 3:
+    raw_input = input
+elif sys.version_info[0] < 3:
+    input = raw_input
 
 class ARPP(object):
     def __init__(self):
@@ -201,7 +207,7 @@ class ARPP(object):
 
     def CLI(self):
         try:
-            command = input(">>")
+            command = raw_input(">>")
             command = str(command).lower()
             self.parse_command(command=command)
         except SyntaxError:
