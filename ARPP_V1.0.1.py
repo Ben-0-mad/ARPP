@@ -44,7 +44,7 @@ class ARPP(object):
             "scan local network for users":self.get_network_users_ARPSCAN,\
             "menu":self.print_menu,\
             "arp poison":self.ARP_poison,\
-            "exit":quit,\
+            "exit":sys.exit,\
             "select interface":self.select_interface}
     
     def _get_my_ip(self):
@@ -73,17 +73,6 @@ class ARPP(object):
             return True
     
     def _is_valid_ip(self, ip):
-        # regex_ipv4 = "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
-        # regex_ipv6 = "((([0-9a-fA-F]){1,4})\\:){7}([0-9a-fA-F]){1,4}"
-    
-        # ip_v4 = re.compile(regex_ipv4)
-        # ip_v6 = re.compile(regex_ipv6)
-    
-        # if re.search(ip_v4, ip):
-        #     return True
-        # elif re.search(ip_v6,ip):
-        #     return True
-        # return False
         try:
             return [0<=int(x)<256 for x in re.split('\.',re.match(r'^\d+\.\d+\.\d+\.\d+$',ip).group(0))].count(True)==4
         except:
@@ -211,7 +200,7 @@ class ARPP(object):
 
     def CLI(self):
         try:
-            command = input(">>") #rawrawrawsputin
+            command = raw_input(">>") #rawrawrawsputin
             command = str(command).lower()
             self.parse_command(command=command)
         except SyntaxError:
