@@ -161,6 +161,8 @@ class ARPP(object):
         while not self._is_valid_ip(ipVictim):
             try:
                 ipVictim = str(input("ip of victim>>"))
+                print(ipVictim)
+                print("Input ip is {}".format(self._is_valid_ip(ipVictim)))
             except SyntaxError:
                 pass
         
