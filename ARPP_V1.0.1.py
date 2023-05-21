@@ -84,8 +84,10 @@ class ARPP(object):
         # elif re.search(ip_v6,ip):
         #     return True
         # return False
-        
-        return [0<=int(x)<256 for x in re.split('\.',re.match(r'^\d+\.\d+\.\d+\.\d+$',ip).group(0))].count(True)==4
+        try:
+            return [0<=int(x)<256 for x in re.split('\.',re.match(r'^\d+\.\d+\.\d+\.\d+$',ip).group(0))].count(True)==4
+        except:
+            return False
 
     def print_menu(self):
         task_names = self.TASK_DICT.keys()
