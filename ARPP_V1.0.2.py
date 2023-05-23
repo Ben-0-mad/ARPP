@@ -50,6 +50,7 @@ class ARPP(object):
             "select interface":self.select_interface,\
             "end ARP poisoning processes": self.end_ARP}
         self.THREADED_TASKS = []
+        self.END_ALL_THREADS = False
     
     def _get_my_ip(self):
         my_ip = get_if_addr(self.SELECTED_INTERFACE) # this variable is a string
@@ -187,6 +188,9 @@ class ARPP(object):
         print("ARP spoofing started")
         def rec():
             while True:
+                if self.END_ALL_THREADS:
+                    break
+                
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
                 sleep(5)
         
@@ -206,7 +210,7 @@ class ARPP(object):
             task_to_kill = int(raw_input("Task to terminate>>"))
             for task in self.THREADED_TASKS:
                 if task.getName() == alive_tasks_names[task_to_kill]:
-                    task.join(timeout=1)
+                    self.END_ALL_THREADS = True
         except:
             tb = traceback.format_exc()
             print(tb)
