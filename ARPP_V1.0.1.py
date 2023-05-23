@@ -4,6 +4,8 @@ import argparse
 from time import sleep
 import re # regex for ip validation
 import sys
+import traceback
+
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -191,14 +193,19 @@ class ARPP(object):
                 task()
             except IndexError as e:
                 print("Command not found\n")
-                print(e.__traceback__)
+                tb = traceback.format_exc()
+                print(tb)
         else:
             try:
                 task = self.TASK_DICT[command]
                 task()
             except KeyError as e:
-                print(e.__traceback__)
+                print(e)
                 #print("Command not found\n")
+                
+                tb = traceback.format_exc()
+                print(tb)
+                
 
     def CLI(self):
         try:
