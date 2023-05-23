@@ -47,7 +47,8 @@ class ARPP(object):
             "menu":self.print_menu,\
             "arp poison":self.ARP_poison,\
             "exit":sys.exit,\
-            "select interface":self.select_interface}
+            "select interface":self.select_interface,\
+            "end ARP poisoning processes": self.end_ARP}
         self.THREADED_TASKS = []
     
     def _get_my_ip(self):
@@ -189,11 +190,28 @@ class ARPP(object):
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
                 sleep(5)
         
-        T = threading.Thread(target=rec, name="ARP_spoofing")
+        T = threading.Thread(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim))
         self.THREADED_TASKS.append(T)
         self.THREADED_TASKS[-1].start()
         
-
+    def end_ARP(self):
+        print("From the following threads select the processes to terminate:")
+        alive_tasks_names = {}
+        for i,task in enumerate(self.THREADED_TASKS,start=0):
+            alive_tasks_names[i] = task.getName()
+            if task.isAlive():
+                print("{}: {}".format(i, task.getName()))
+        
+        try:
+            task_to_kill = int(raw_input("Task to terminate>>"))
+            for task in self.THREADED_TASKS:
+                if task.getName() == alive_tasks_names[task_to_kill]:
+                    task.join(timeout=1)
+        except:
+            tb = traceback.format_exc()
+            print(tb)
+        
+        
 
     def parse_command(self, command):
         if command == "":
