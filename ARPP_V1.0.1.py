@@ -58,12 +58,16 @@ class ARPP(object):
                 self.select_interface()
         return get_if_hwaddr(self.SELECTED_INTERFACE)
             
+    def _assure_interface_is_selected(self):
+        while self.SELECTED_INTERFACE is None:
+            self.select_interface()
     
     def _get_mac_from_ip(self, ip):
+        self._assure_interface_is_selected()
         arp_request = ARP(pdst=ip)
         broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
         pkt = broadcast / arp_request
-        answ = srp(pkt, timeout=1, verbose=False)[0]
+        answ = srp(pkt, timeout=1, verbose=False, iface=self.SELECTED_INTERFACE)[0]
         return answ[0][1].hwsrc
 
     def _represents_int(self, i):
@@ -120,8 +124,7 @@ class ARPP(object):
         """
         ARP ping scan
         """
-        while self.SELECTED_INTERFACE is None:
-            self.select_interface()
+        self._assure_interface_is_selected()
         
         ip_range = self.get_ip_range()
         request = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range) #dst="ff:ff:..." means all devices on the network will receive this packet.
@@ -150,6 +153,8 @@ class ARPP(object):
             ipVictim (str): _description_
             ipToSpoof (str): _description_
         """
+        self._assure_interface_is_selected()
+        
         ipVictim = ""
         ipToSpoof = ""
         
