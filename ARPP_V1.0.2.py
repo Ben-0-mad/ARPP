@@ -226,6 +226,7 @@ class ARPP(object):
             for task in self.THREADED_TASKS:
                 if task.getName() == alive_tasks_names[task_to_kill]:
                     task.stop()
+                    task.stopped()
                     task.join()
         except:
             tb = traceback.format_exc()
