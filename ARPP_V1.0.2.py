@@ -1,4 +1,3 @@
-from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 from scapy.all import *
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
