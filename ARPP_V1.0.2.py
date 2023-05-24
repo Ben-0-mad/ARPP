@@ -157,6 +157,7 @@ class ARPP(object):
             ipToSpoof (str): _description_
         """
         self._assure_interface_is_selected()
+        self.END_ALL_THREADS = False
         
         ipVictim = ""
         ipToSpoof = ""
