@@ -1,3 +1,5 @@
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any
 from scapy.all import *
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
 import argparse
@@ -39,6 +41,25 @@ if sys.version_info[0] >= 3:
 elif sys.version_info[0] < 3:
     input = raw_input
 
+class ThreadV2(threading.Thread):
+    """Implement a stop method
+
+    Args:
+        object (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    def __init__(self,  *args, **kwargs):
+        super(ThreadV2, self).__init__(*args, **kwargs)
+        self._stop_event = threading.Event()
+    
+    def stop(self):
+        self._stop_event.set()
+    
+    def stopped(self):
+        return self._stop_event.is_set()
+
 class ARPP(object):
     def __init__(self):
         self.SELECTED_INTERFACE = None
@@ -50,7 +71,6 @@ class ARPP(object):
             "select interface":self.select_interface,\
             "end ARP poisoning processes": self.end_ARP}
         self.THREADED_TASKS = []
-        self.END_ALL_THREADS = False
     
     def _get_my_ip(self):
         my_ip = get_if_addr(self.SELECTED_INTERFACE) # this variable is a string
@@ -157,7 +177,6 @@ class ARPP(object):
             ipToSpoof (str): _description_
         """
         self._assure_interface_is_selected()
-        self.END_ALL_THREADS = False
         
         ipVictim = ""
         ipToSpoof = ""
@@ -189,9 +208,6 @@ class ARPP(object):
         print("ARP spoofing started")
         def rec():
             while True:
-                if self.END_ALL_THREADS:
-                    break
-                
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
                 sleep(5)
         
@@ -211,7 +227,7 @@ class ARPP(object):
             task_to_kill = int(raw_input("Task to terminate>>"))
             for task in self.THREADED_TASKS:
                 if task.getName() == alive_tasks_names[task_to_kill]:
-                    self.END_ALL_THREADS = True
+                    task.join()
         except:
             tb = traceback.format_exc()
             print(tb)
