@@ -174,7 +174,7 @@ class ARPP(object):
             except SyntaxError:
                 pass
         
-        macVictim = self._get_mac_from_ip(ipVictim)
+        macVictim = self._get_mac_from_ip(ipVictim) # fix bug where error given if ip is not online on network
         macAttacker = self._get_my_mac()
                 
         
@@ -222,7 +222,10 @@ class ARPP(object):
             tb = traceback.format_exc()
             print(tb)
         
-        
+    def end_all_threads(self):
+        for e in self.EVENTS:
+            if not e.isSet():
+                e.set()
 
     def parse_command(self, command):
         if command == "":
@@ -232,6 +235,8 @@ class ARPP(object):
             try:
                 task_name = self.TASK_DICT.keys()[command]
                 task = self.TASK_DICT[task_name]
+                if task is sys.exit:
+                    self.end_all_threads()
                 task()
             except IndexError as e:
                 print("Command not found\n")
