@@ -235,8 +235,8 @@ class ARPP(object):
             try:
                 task_name = self.TASK_DICT.keys()[command]
                 task = self.TASK_DICT[task_name]
-                if task is sys.exit:
-                    self.end_all_threads()
+                # if task is sys.exit:
+                #     self.end_all_threads()
                 task()
             except IndexError as e:
                 print("Command not found\n")
