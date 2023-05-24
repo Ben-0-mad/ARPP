@@ -187,7 +187,7 @@ class ARPP(object):
         
         print("ARP spoofing started")
         e = threading.Event()
-        def rec(event: threading.Event):
+        def rec(event):
             while True:
                 if event.isSet():
                     break
