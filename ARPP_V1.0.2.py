@@ -209,7 +209,7 @@ class ARPP(object):
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
                 sleep(5)
         
-        T = threading.Thread(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim))
+        T = ThreadV2(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim))
         self.THREADED_TASKS.append(T)
         self.THREADED_TASKS[-1].start()
         
