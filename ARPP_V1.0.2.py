@@ -1,4 +1,3 @@
-from typing import Any
 from scapy.all import *
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
 import argparse
