@@ -225,6 +225,7 @@ class ARPP(object):
             task_to_kill = int(raw_input("Task to terminate>>"))
             for task in self.THREADED_TASKS:
                 if task.getName() == alive_tasks_names[task_to_kill]:
+                    task.stop()
                     task.join()
         except:
             tb = traceback.format_exc()
