@@ -90,7 +90,7 @@ class ARPP(object):
             return False
 
     def print_menu(self):
-        task_names = self.TASK_DICT.keys()
+        task_names = list(set(self.TASK_DICT.keys()))
         for i, task_name in enumerate(task_names, start=0):
             print("{}: {}".format(i, task_name))
 
@@ -239,7 +239,7 @@ class ARPP(object):
             print(tb)
         
     def end_all_threads(self):
-        print("closing threads... please wait")
+        print("\nclosing threads... please wait")
         for e in self.EVENTS:
                 e.set()
         del self.EVENTS
@@ -254,7 +254,7 @@ class ARPP(object):
         elif self._represents_int(command):
             command = int(command)
             try:
-                task_name = self.TASK_DICT.keys()[command]
+                task_name = list(set(self.TASK_DICT.keys()))[command]
                 task = self.TASK_DICT[task_name]
                 # if task == sys.exit:
                 #     self.end_all_threads()
