@@ -239,10 +239,14 @@ class ARPP(object):
             print(tb)
         
     def end_all_threads(self):
+        print("closing threads... please wait")
         for e in self.EVENTS:
                 e.set()
         del self.EVENTS
         del self.THREADED_TASKS
+        self.EVENTS = []
+        self.THREADED_TASKS = []
+        
 
     def parse_command(self, command):
         if command == "":
