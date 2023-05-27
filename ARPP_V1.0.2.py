@@ -166,9 +166,9 @@ class ARPP(object):
             except SyntaxError:
                 pass
         
-        print("The ip to spoof is the ip you want your mac address to be associated to in the victim's arp table")
         while not self._is_valid_ip(ipToSpoof):
             try:
+                print("The ip to spoof is the ip you want your mac address to be associated to in the victim's arp table")
                 ipToSpoof = str(input("ip to spoof>>"))
             except SyntaxError:
                 pass
@@ -191,7 +191,7 @@ class ARPP(object):
                 if event.isSet():
                     break
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
-                sleep(5)
+                sleep(2)
         
         T = threading.Thread(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim), args=(e,))
         
