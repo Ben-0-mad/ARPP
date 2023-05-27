@@ -48,7 +48,8 @@ class ARPP(object):
             "arp poison":self.ARP_poison,\
             "exit":sys.exit,\
             "select interface":self.select_interface,\
-            "end ARP poisoning processes": self.end_ARP,\
+            "end an ARP poisoning process": self.end_ARP,\
+            "end all ARP poisoning processes":self.end_all_threads,\
             "ARP MITM":self.ARP_MITM}
         self.THREADED_TASKS = []
         self.EVENTS = []
@@ -239,8 +240,9 @@ class ARPP(object):
         
     def end_all_threads(self):
         for e in self.EVENTS:
-            if not e.isSet():
                 e.set()
+        del self.EVENTS
+        del self.THREADED_TASKS
 
     def parse_command(self, command):
         if command == "":
