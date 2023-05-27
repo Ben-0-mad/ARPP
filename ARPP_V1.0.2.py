@@ -41,6 +41,9 @@ elif sys.version_info[0] < 3:
 
 class ARPP(object):
     def __init__(self):
+        """The __init__ defines some attributes of the class helping with: 
+        choice of interface, the menu options, and multi threading for arp poisoning 
+        """
         self.SELECTED_INTERFACE = None
         self.TASK_DICT = {"help":parser.print_help,\
             "scan local network for users":self.get_network_users_ARPSCAN,\
@@ -55,19 +58,39 @@ class ARPP(object):
         self.EVENTS = []
     
     def _get_my_ip(self):
-        my_ip = get_if_addr(self.SELECTED_INTERFACE) # this variable is a string
+        """This is a helper method for obtaining your IP adress on the selected interface.
+
+        Returns:
+            str : IP address of this machine on selected interface
+        """
+        my_ip = get_if_addr(self.SELECTED_INTERFACE)
         return my_ip
     
     def _get_my_mac(self):
-        while self.SELECTED_INTERFACE is None:
-                self.select_interface()
+        """This is a helper method for obtaining your mac adress on the selected interface
+
+        Returns:
+            str : MAC address of this machine on selected interface
+        """
+        self._assure_interface_is_selected()
         return get_if_hwaddr(self.SELECTED_INTERFACE)
             
     def _assure_interface_is_selected(self):
+        """This is a helper method which helps in making sure that there is 
+        an interface selected by the user before the program proceeds.
+        """
         while self.SELECTED_INTERFACE is None:
             self.select_interface()
     
     def _get_mac_from_ip(self, ip):
+        """This is a helper method which helps in obtaining the MAC address of a given IP address on a local network.
+
+        Args:
+            ip (str): The IP address of a machine on the network
+
+        Returns:
+            str : The MAC address associated to te given IP address
+        """
         self._assure_interface_is_selected()
         arp_request = ARP(pdst=ip)
         broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
@@ -76,6 +99,14 @@ class ARPP(object):
         return answ[0][1].hwsrc
 
     def _represents_int(self, i):
+        """This helper method helps in determining whether a given input represents an integer or not
+
+        Args:
+            i (str): some arbitrary input
+
+        Returns:
+            bool : True if i represents an integer and otherwise False
+        """
         try: 
             int(i)
         except ValueError:
@@ -84,12 +115,23 @@ class ARPP(object):
             return True
     
     def _is_valid_ip(self, ip):
+        """This helper method helps making sure that a given IP address is a valid one, which is here programmed to 
+        be True when all octets are between 0 and 255 when written in decimal.
+
+        Args:
+            ip (str): A given IP address whose validity needs to be checked
+
+        Returns:
+            bool : True if ip is a valid IP address
+        """
         try:
             return [0<=int(x)<256 for x in re.split('\.',re.match(r'^\d+\.\d+\.\d+\.\d+$',ip).group(0))].count(True)==4
         except:
             return False
 
     def print_menu(self):
+        """This method displays the options/actions to choose from
+        """
         task_names = list(set(self.TASK_DICT.keys()))
         for i, task_name in enumerate(task_names, start=0):
             print("{}: {}".format(i, task_name))
@@ -141,7 +183,6 @@ class ARPP(object):
         for i, user in enumerate(network_devices, start=1):
             print("{}          {}".format(user[1].psrc, user[1].hwsrc))
         
-        #print(network_devices)
         if network_devices == []:
             print("No network devices found\n")
         
@@ -226,11 +267,6 @@ class ARPP(object):
         
         try:
             ttk_id = int(raw_input("Task to terminate>>"))
-            # for task in self.THREADED_TASKS:
-            #     if task.getName() == alive_tasks_names[ttk_id]:
-            #         task.stop()
-            #         task.stopped()
-            #         task.join()
             self.EVENTS[ttk_id].set() # stops the thread
             del self.THREADED_TASKS[ttk_id] # remove thread from list of threads 
             del self.EVENTS[ttk_id] # remove the event corresponding to the thread also
