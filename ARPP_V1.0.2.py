@@ -208,7 +208,7 @@ class ARPP(object):
                 pass
         while not self._is_valid_ip(ipRouter):
             try:
-                ipVictim = str(input("ip of router>>"))
+                ipRouter = str(input("ip of router>>"))
             except SyntaxError:
                 pass
         self.ARP_poison(ipVictim=ipVictim, ipToSpoof=ipRouter)
