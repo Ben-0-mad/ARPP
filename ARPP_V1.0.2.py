@@ -283,8 +283,11 @@ def main():
     cl = ARPP()
     print_banner()
     cl.print_menu()
-    while True:
-        cl.CLI()
+    try:
+        while True:
+            cl.CLI()
+    except KeyboardInterrupt:
+        cl.end_all_threads()
     
 
 if __name__=="__main__":
