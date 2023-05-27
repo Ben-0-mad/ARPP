@@ -184,7 +184,7 @@ class ARPP(object):
         pkt[ARP].hwdst = macVictim
         pkt[ARP].pdst  = ipVictim
         
-        print("ARP spoofing started")
+        print("ARP spoofing {} -> {} started".format(ipToSpoof, ipVictim))
         e = threading.Event()
         def rec(event):
             while True:
