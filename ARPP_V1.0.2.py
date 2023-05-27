@@ -50,7 +50,7 @@ class ARPP(object):
             "select interface":self.select_interface,\
             "end an ARP poisoning process": self.end_ARP,\
             "end all ARP poisoning processes":self.end_all_threads,\
-            "ARP MITM":self.ARP_MITM}
+            "arp mitm":self.ARP_MITM}
         self.THREADED_TASKS = []
         self.EVENTS = []
     
@@ -267,12 +267,11 @@ class ARPP(object):
             try:
                 task = self.TASK_DICT[command]
                 task()
-            except KeyError as e:
-                print(e)
-                #print("Command not found\n")
+            except KeyError:
+                print("Command not found\n")
                 
-                tb = traceback.format_exc()
-                print(tb)
+                #tb = traceback.format_exc()
+                #print(tb)
                 
 
     def CLI(self):
