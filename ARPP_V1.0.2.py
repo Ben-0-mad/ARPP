@@ -98,7 +98,10 @@ class ARPP(object):
         broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
         pkt = broadcast / arp_request
         answ = srp(pkt, timeout=1, verbose=False, iface=self.SELECTED_INTERFACE)[0]
-        return answ[0][1].hwsrc
+        if answ.res == []:
+            return None
+        else:
+            return answ[0][1].hwsrc
 
     def _represents_int(self, i):
         """This helper method helps in determining whether a given input represents an integer or not
@@ -252,6 +255,9 @@ class ARPP(object):
                 pass
         
         macVictim = self._get_mac_from_ip(ipVictim) # fix bug where error given if ip is not online on network
+        if macVictim is None:
+            print("Victims MAC address could not be found")
+            return
         macAttacker = self._get_my_mac()
                 
         
