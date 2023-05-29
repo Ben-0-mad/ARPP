@@ -6,6 +6,7 @@ import re # regex for ip validation
 import sys
 import traceback
 import threading
+import platform # to support windows and linux
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -56,6 +57,7 @@ class ARPP(object):
             "arp mitm":self.ARP_MITM}
         self.THREADED_TASKS = []
         self.EVENTS = []
+        self.system_os = platform.system() # returns either 'Windows' 'Linux' or 'Mac'
     
     def _get_my_ip(self):
         """This is a helper method for obtaining your IP adress on the selected interface.
@@ -143,6 +145,12 @@ class ARPP(object):
         return ip_range
 
     def select_interface(self):
+        if self.system_os == 'Windows':
+            self.select_interface_windows()
+        elif self.system_os == 'Linux':
+            self.select_interface_linux()
+        
+    def select_interface_linux(self):
         # code breaks for Windows here
         print("Which interface would you like to use:")
         iflist = get_if_list()
@@ -158,8 +166,9 @@ class ARPP(object):
             
         if self._represents_int(answer):
             answer = int(answer)
-            if answer < len(iflist):
+            if answer>=0 and answer<len(iflist):
                 self.SELECTED_INTERFACE=iflist[answer]
+                print("selected {}".format(self.SELECTED_INTERFACE))
             else:
                 print("Interface does not exist\n")
         elif answer in iflist:
@@ -167,6 +176,34 @@ class ARPP(object):
         else:
             print("Interface does not exist\n")
     
+    def select_interface_windows(self):
+        """The main issue is that for windows the selected interface has to be of type scapy.arch.windows.NetworkInterface
+        and cannot be a string. Hence we need to handle the selection of the interface differently for windows.
+        """
+        if_list = get_windows_if_list()
+        # display all interface names to user
+        for i, interface_dict in enumerate(if_list,start=0):
+            print("{}         {}".format(i, interface_dict['name']))
+        
+        # get user choice
+        answer = None
+        while answer is None:
+            try:
+                answer = str(input("select interface>>"))
+            except:
+                answer = None
+        
+        # verify that choice is valid
+        if self._represents_int(answer):
+            answer = int(answer)
+            if answer >= 0 and answer < len(if_list):
+                selected_interface_dict = if_list[answer]
+                selected_interface_name = selected_interface_dict['name']
+                self.SELECTED_INTERFACE = IFACES.dev_from_name( selected_interface_name )
+                print("selected {}".format(selected_interface_name))
+                #get_windows_if_list()[4]['name']
+        
+        
     def get_network_users_ARPSCAN(self):
         """
         ARP ping scan
@@ -175,12 +212,12 @@ class ARPP(object):
         
         ip_range = self.get_ip_range()
         request = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range) #dst="ff:ff:..." means all devices on the network will receive this packet.
-        print("Scanning devices connected to network, please wait...")
+        print("Finding devices connected to network, please wait...")
         
         print("Selected Interface: {}".format(self.SELECTED_INTERFACE))
             
         network_devices = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
-        for i, user in enumerate(network_devices, start=1):
+        for i, user in enumerate(network_devices, start=0):
             print("{}          {}".format(user[1].psrc, user[1].hwsrc))
         
         if network_devices == []:
@@ -188,7 +225,7 @@ class ARPP(object):
         
     def ARP_poison(self, ipVictim = "", ipToSpoof = ""):
         """
-        Victim's arp table will contain the entry
+        Victim's arp table will contain the following entry
         ----------
         ...
         ipToSpoof at macAttacker
@@ -196,8 +233,8 @@ class ARPP(object):
         ----------
 
         Args:
-            ipVictim (str): _description_
-            ipToSpoof (str): _description_
+            ipVictim (str): IP address of the victim machine
+            ipToSpoof (str): IP address that our MAC address needs to be associated with in the victim's ARP table
         """
         self._assure_interface_is_selected()
         
@@ -262,7 +299,7 @@ class ARPP(object):
         alive_tasks_names = {}
         for i,task in enumerate(self.THREADED_TASKS,start=0):
             alive_tasks_names[i] = task.getName()
-            if task.isAlive():
+            if task.is_alive():
                 print("{}: {}".format(i, task.getName()))
         
         try:
@@ -328,8 +365,10 @@ def main():
         while True:
             cl.CLI()
     except KeyboardInterrupt:
-        cl.end_all_threads()
+        cl.end_all_threads() #prevent memory leak when interrupting
     
 
 if __name__=="__main__":
     main()
+
+sniff()
