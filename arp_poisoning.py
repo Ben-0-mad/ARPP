@@ -26,7 +26,7 @@ def print_banner():
    /_\ | _ \ _ \ _ \\
   / _ \|   /  _/  _/
  /_/ \_\_|_\_| |_|  
-                  By group 21  
+                  By group 20
     """
     print(banner)
 
