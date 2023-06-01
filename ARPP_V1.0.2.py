@@ -366,9 +366,9 @@ class ARPP(object):
         
         def packet_callback(packet):
             if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
-                print(f"DNS in packet: {DNS in packet}") 
-                print(f"DNS request for targeted site: {any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()])}" ) 
-                print(f"Packet operation code is 0: {packet[DNS].opcode==0}")
+                print("DNS in packet: {}".format(DNS in packet)) 
+                print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
+                print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
             def send_spoofed_response():
                 # if  (DNS in packet)\
                 #         and (IP in packet)\
