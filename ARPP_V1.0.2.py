@@ -236,7 +236,7 @@ class ARPP(object):
         results = srp(request, timeout=10, verbose=1, iface=self.SELECTED_INTERFACE)[0] # sr is send receive command, srp for L2 packet, add 1 at the end for waiting for 1 packet only.
         for i, req_and_reply in enumerate(results, start=0):
             print("{}          {}".format(req_and_reply[1].psrc, req_and_reply[1].hwsrc)) #req_and_reply = [request packet, reply packet], we want to read the reply in this case
-        print()
+        print("\n")
         
         if results.res == []:
             print("[-] No network devices found\n")
