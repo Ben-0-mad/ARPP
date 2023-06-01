@@ -333,7 +333,7 @@ class ARPP(object):
         
         # if there are no running tasks, let user know
         if not alive_tasks_names:
-            print("[!] There are no running threads")
+            print("[i] There are no running threads")
         
     def end_ARP(self):
         """A method that allows the user to end 1 task from a list of tasks
