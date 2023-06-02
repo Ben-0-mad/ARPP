@@ -385,6 +385,7 @@ class ARPP(object):
         
         # this function is called on each packet in the sniff call further ahead
         def packet_callback(packet):
+            # this is just for debugging purposes on the linux machine
             if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
                 print("DNS in packet: {}".format(DNS in packet)) 
                 print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
