@@ -8,7 +8,8 @@ import sys
 import traceback
 import threading
 import platform # to support windows and linux
-import win32serviceutil # to turn on/off IP forwarding on Windows
+if platform.system() == "Windows":
+    import win32serviceutil # to turn on/off IP forwarding on Windows
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
