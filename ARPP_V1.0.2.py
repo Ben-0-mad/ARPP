@@ -474,7 +474,7 @@ class ARPP(object):
             #     print("DNS in packet: {}".format(DNS in packet)) 
             #     print("DNS request for targeted site: {}".format(any([target_site in str(packet[DNSQR].qname) for target_site in target_sites.keys()]) ))
             #     print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
-            def send_spoofed_response(pkt):
+            def send_spoofed_response(packet):
                 # first we check if the packet is one that needs to be spoofed
                 if  (DNS in packet)\
                         and (IP in packet)\
