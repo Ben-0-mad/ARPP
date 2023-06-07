@@ -501,7 +501,7 @@ class ARPP(object):
                     send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
                     print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
                 else:
-                    forward_dns(pkt)
+                    forward_dns(packet)
             
             return send_spoofed_response
                         
