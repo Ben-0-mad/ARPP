@@ -458,17 +458,18 @@ class ARPP(object):
         # this function is called on each packet in the sniff call further ahead
         def packet_callback(loc_dns_server):
             def forward_dns(pkt):
-                print("Forwarding: {}".format(pkt[DNSQR].qname))
-                response = sr1(
-                    IP(dst='8.8.8.8')/
-                        UDP(sport=pkt[UDP].sport)/
-                        DNS(rd=1, id=pkt[DNS].id, qd=DNSQR(qname=pkt[DNSQR].qname)),
-                    verbose=0,
-                )
-                resp_pkt = IP(dst=pkt[IP].src, src=loc_dns_server)/UDP(dport=pkt[UDP].sport)/DNS()
-                resp_pkt[DNS] = response[DNS]
-                send(resp_pkt, verbose=0)
-                return "Responding to {}".format(pkt[IP].src)
+                if DNS in pkt and DNSQR in pkt:
+                    print("Forwarding: {}".format(pkt[DNSQR].qname))
+                    response = sr1(
+                        IP(dst='8.8.8.8')/
+                            UDP(sport=pkt[UDP].sport)/
+                            DNS(rd=1, id=pkt[DNS].id, qd=DNSQR(qname=pkt[DNSQR].qname)),
+                        verbose=0,
+                    )
+                    resp_pkt = IP(dst=pkt[IP].src, src=loc_dns_server)/UDP(dport=pkt[UDP].sport)/DNS()
+                    resp_pkt[DNS] = response[DNS]
+                    send(resp_pkt, verbose=0)
+                    return "Responding to {}".format(pkt[IP].src)
             # this is just for debugging purposes on the linux machine
             # if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
             #     print("DNS in packet: {}".format(DNS in packet)) 
