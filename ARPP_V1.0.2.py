@@ -510,10 +510,8 @@ class ARPP(object):
                     
                     # if the DNS query is not for a website we're targeting
                     else:
-                        print("Forwarding DNS packet")
                         forward_dns(packet)
                 else:
-                    print("Forwarding packet")
                     forward_packet(packet)
             
             return send_spoofed_response
