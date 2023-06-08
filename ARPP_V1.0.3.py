@@ -365,7 +365,7 @@ class ARPP(object):
                         print("[i] Healing ARP table...")
                         macOfSpoofedIp = self._get_mac_from_ip(ipToSpoof)
                         packet = Ether(src=macOfSpoofedIp)/ARP(hwsrc=macOfSpoofedIp, psrc=ipToSpoof, hwdst=macVictim, pdst=ipVictim)
-                        sendp( packet, iface=self.SELECTED_INTERFACE verbose=False )
+                        sendp( packet, iface=self.SELECTED_INTERFACE, verbose=False )
                     except:
                         pass
                     break
