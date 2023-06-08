@@ -514,7 +514,7 @@ class ARPP(object):
         e=threading.Event()
         def rec(event):
             while True:
-                sniff(timeout=5, prn=packet_callback(loc_dns), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
+                sniff(timeout=5, filter="udp port 53 and ip dst {}".format(loc_dns), prn=packet_callback(loc_dns), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
                 if event.is_set():
                     break
         
