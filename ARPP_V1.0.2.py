@@ -476,7 +476,7 @@ class ARPP(object):
                 return "Responding to {}".format(pkt[IP].src)
             
             def forward_packet(pkt):
-                sr1(pkt)
+                send(pkt)
 
             def send_spoofed_response(packet):
                 # if it is a 'DNS' 'query' that has 0 'answer count' aka 0 answers
