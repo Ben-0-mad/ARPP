@@ -362,10 +362,10 @@ class ARPP(object):
             while True:
                 if event.isSet():
                     try:
-                        print("[i] Healing ARP tables...")
+                        print("[i] Healing ARP table...")
                         macOfSpoofedIp = self._get_mac_from_ip(ipToSpoof)
-                        pkt = Ether(src=macOfSpoofedIp)/ARP(hwsrc=macOfSpoofedIp, psrc=ipToSpoof, hwdst=macVictim, pdst=ipVictim)
-                        sendp( pkt )
+                        packet = Ether(src=macOfSpoofedIp)/ARP(hwsrc=macOfSpoofedIp, psrc=ipToSpoof, hwdst=macVictim, pdst=ipVictim)
+                        sendp( packet )
                     except:
                         pass
                     break
