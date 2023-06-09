@@ -554,7 +554,7 @@ class ARPP(object):
 
 
 class DNSPacketHandler(object):
-    def __init__(self, loc_dns_server, selected_interface) -> None:
+    def __init__(self, loc_dns_server, selected_interface):
         self.LOC_DNS_SERVER = loc_dns_server
         self.SELECTED_INTERFACE = selected_interface
         
