@@ -384,6 +384,8 @@ class ARPP(object):
     def ARP_MITM(self):
         """Method for performing a MITM attack using ARP poisoning
         """
+        self._assure_interface_is_selected()
+        
         ipVictim = ""
         ipRouter = ""
         while not self._is_valid_ip(ipVictim):
