@@ -463,13 +463,13 @@ class ARPP(object):
             ipVictim (str, optional): The IP of the victim that you want to DNS spoof. Defaults to "".
         """
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
-        target_sites_map = {
-            b"google.com.":"10.0.2.9",\
-            b"www.google.com.":"10.0.2.9",\
-            b"www.google.com":"10.0.2.9",\
-            b"test.nl.":"10.0.2.9",\
-            b"www.test.nl.":"10.0.2.9"
-            }
+        target_sites_map = {}
+        with open("target_sites_DNS.conf", "r") as f:
+            for line in f.readlines():
+                if not line.startswith("#"):   
+                    splitline = line.split("|")
+                    site, site_map = splitline[0].strip().encode(), splitline[1].strip()
+                    target_sites_map[site]=site_map
         loc_dns = "127.0.0.1" # corresponding to iptable ip address that packet is routed to
         
         DPH = DNSPacketHandler(loc_dns, self.SELECTED_INTERFACE)
