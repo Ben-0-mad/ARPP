@@ -65,7 +65,8 @@ class ARPP(object):
             "end all threaded tasks":self.end_all_threads,\
             "show running threads":self.show_arp_poisoning_threads,\
             "arp mitm":self.ARP_MITM,\
-            "DNS spoofing":self.DNS_spoof_startup}
+            "DNS spoofing":self.DNS_spoof_startup,\
+            "SSL stripping":self.SSLstrip}
         #self.TASK_DICT = collections.OrderedDict(sorted(self.TASK_DICT_temp.items())) #sorting ditcionary by keys
         self.THREADED_TASKS = []
         self.EVENTS = []
