@@ -458,11 +458,11 @@ class ARPP(object):
             ipVictim (str, optional): The IP of the victim that you want to DNS spoof. Defaults to "".
         """
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
-        target_sites_map = {b"google.com.":"216.58.208.100",\
-            b"www.google.com.":"216.58.208.100",\
-            b"www.google.com":"216.58.208.100",\
-            b"test.nl.":"216.58.208.100",\
-            b"www.test.nl.":"216.58.208.100"}
+        target_sites_map = {b"google.com.":"10.0.2.9",\
+            b"www.google.com.":"10.0.2.9",\
+            b"www.google.com":"10.0.2.9",\
+            b"test.nl.":"10.0.2.9",\
+            b"www.test.nl.":"10.0.2.9"}
         target_sites=list(target_sites_map.keys())
         fake_ips = list(target_sites_map.values())
         
