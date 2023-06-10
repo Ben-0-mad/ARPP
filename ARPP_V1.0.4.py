@@ -1,6 +1,5 @@
 from scapy.all import *
 from scapy.all import ARP, DNS, Ether, IP, UDP, DNS, DNSQR, DNSRR, TCP
-from scapy.layers import http, tls
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
 import argparse
 from time import sleep
