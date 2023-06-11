@@ -43,6 +43,7 @@ echo nameserver <IP address broadcast-1> >> /etc/resolv.conf
 ```
 
 where the ´<>´ need to be replaced by some IP addresses 
+
     - Open terminal and execute: `ifconfig` (the IP address is the one used to spoof the websites we want that are described on the `.conf` file)
 - M1: 
     - Open terminal and execute: `ipconfig` 
