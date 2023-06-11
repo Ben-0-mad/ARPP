@@ -27,7 +27,36 @@ Steps to achieve ARP poisoning:
 
 """
 # command line tool parser
-parser = argparse.ArgumentParser(description="This program is an ARP poisoning tool")
+parser = argparse.ArgumentParser(prog='ProgramName',\
+                                description="""This program is a Command Line Interface for ARP poisoning and DNS spoofing.\n
+First run \n
+>>> sudo python ARPPV1.0.4.py\n
+This will start the program and show the menu.\n
+\n
+The commands in the menu are listed with numbers. You may type the number or the name of the command to choose that option.\n
+\n
+The following main methods are implemented:\n
+ARPP.get_network_users_ARPSCAN\n
+\n
+ARPP.select_interface : Select the interface that you want to be working with packets on. \n
+    If your victim is on interface eth0 you need to select eth0 from the menu\n
+\n
+ARPP.ARP_poison : Poison the ARP table of the victim by injecting a fake IP that is then mapped to your MAC address.\n
+    This is done by broadcasting ARP who-has packets where the IP source is spoofed to be yours, fooling the target that you MAC correspond to that spoofed IP.\n
+\n
+ARPP.ARP_MITM : Poison the ARP table of two devices and pretend to each device that you're the other device. \n
+\n
+ARPP.DNS_spoof_startup : This method obtains the relevant info from the user such as the victim's IP and it ensures that an interface is selected.\n
+\n
+ARPP.SSLstrip : This method is implemented but it does not work.\n
+\n
+ARPP.show_arp_poisoning_threads : Show the thread that are running.\n
+\n
+ARPP.end_task : End a thread that is running a task.\n
+\n
+ARPP.end_all_threads : End all threads that are running.\n
+""",\
+                                epilog='Text at the bottom of help')
 args = parser.parse_args()
 
 def print_banner():
@@ -58,7 +87,7 @@ class ARPP(object):
         """
         self.SELECTED_INTERFACE = None
         self.TASK_DICT = OrderedDict([("menu",self.print_menu),\
-            ("help",parser.print_help),\
+            ("help",self.print_help),\
             ("scan local network for users",self.get_network_users_ARPSCAN),\
             ("select interface",self.select_interface),\
             ("arp poison",self.ARP_poison),\
@@ -73,6 +102,36 @@ class ARPP(object):
         self.THREADED_TASKS = []
         self.EVENTS = []
         self.system_os = platform.system() # returns either 'Windows' 'Linux' or 'Mac'
+    
+    def print_help(self):
+        print("""This program is a Command Line Interface for ARP poisoning and DNS spoofing.
+First run 
+>>> sudo python ARPPV1.0.4.py
+This will start the program and show the menu.
+
+The commands in the menu are listed with numbers. You may type the number or the name of the command to choose that option.
+
+The following main methods are implemented:
+ARPP.get_network_users_ARPSCAN : Find all the devices connected to the network on the selected interface.
+
+ARPP.select_interface : Select the interface that you want to be working with packets on. 
+    If your victim is on interface eth0 you need to select eth0 from the menu
+
+ARPP.ARP_poison : Poison the ARP table of the victim by injecting a fake IP that is then mapped to your MAC address.
+    This is done by broadcasting ARP who-has packets where the IP source is spoofed to be yours, fooling the target that you MAC correspond to that spoofed IP.
+
+ARPP.ARP_MITM : Poison the ARP table of two devices and pretend to each device that you're the other device. 
+
+ARPP.DNS_spoof_startup : This method obtains the relevant info from the user such as the victim's IP and it ensures that an interface is selected.
+
+ARPP.SSLstrip : This method is implemented but it does not work.
+
+ARPP.show_arp_poisoning_threads : Show the thread that are running.
+
+ARPP.end_task : End a thread that is running a task.
+
+ARPP.end_all_threads : End all threads that are running.
+""")
     
     def _get_my_ip(self):
         """This is a helper method for obtaining your IP adress on the selected interface.
@@ -725,7 +784,7 @@ class DNSPacketHandler(object):
         except:
             tb = traceback.format_exc()
             print(tb)
-            with open("log.log", "a") as f:
+            with open("DNSPacketHandler.log", "a") as f:
                 f.write(tb + "\n")
 
 
