@@ -7,3 +7,8 @@ When entering into the Oracle VM Administrator, we need to modify the configurat
 - Repeat step 2 with the other two virtual machines.
 
 ## Execution
+- Open all three machines
+- Open a terminal in M3:
+    - Go to the folder where the project is saved: "cd ARPP"
+    - Execute the lastest version of the project: "sudo python ARPP_V!.0.4.py"
+    - 
