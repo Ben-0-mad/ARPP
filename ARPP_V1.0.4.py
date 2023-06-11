@@ -830,9 +830,11 @@ class SSLstripping(object):
     def handle_packet(self, packet):
         # global initial_http
         # global sslstrip
+        if TCP in packet:
+            print("got packet from {}".format(packet[TCP].psrc))
 
-        if packet.haslayer(TCP) and packet.haslayer(Raw):
-            raw_payload = packet.getlayer(Raw).load
+        if TCP in packet and Raw in packet:
+            raw_payload = packet[Raw].load
 
             if b"GET" in raw_payload:
                 # Step 2: Initial HTTP Connection
