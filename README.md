@@ -28,21 +28,21 @@ When entering into the Oracle VM Administrator, we need to modify the configurat
 - M2: 
     - Since M2 is not in the same interface as M1 and M3, we need to change it's IP address permanently (so we don't have to change its IP address everytime we restart M2). To do so, go to the editor and open the file `/opt/eth0.sh`. Modify its content such that it looks like this:
 
-```
-#!/bin/sh
+        ```
+        #!/bin/sh
 
-sleep 1
-if [ -f /var/run/udhcpc.eth0.pid ]; then
-kill `cat /var/run/udhcpc.eth0.pid`
-sleep 0.1
-fi
+        sleep 1
+        if [ -f /var/run/udhcpc.eth0.pid ]; then
+        kill `cat /var/run/udhcpc.eth0.pid`
+        sleep 0.1
+        fi
 
-ifconfig eth0 <IP address> netmask <Netmask> broadcast <IP address broadcast> up
-route add default gw <IP address default gateway>
-echo nameserver <IP address broadcast-1> >> /etc/resolv.conf
-```
+        ifconfig eth0 <IP address> netmask <Netmask> broadcast <IP address broadcast> up
+        route add default gw <IP address default gateway>
+        echo nameserver <IP address broadcast-1> >> /etc/resolv.conf
+        ```
 
-where the ´<>´ need to be replaced by some IP addresses 
+        where the ´<>´ need to be replaced by some IP addresses 
 
     - Open terminal and execute: `ifconfig` (the IP address is the one used to spoof the websites we want that are described on the `.conf` file)
 - M1: 
