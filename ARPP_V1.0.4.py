@@ -590,6 +590,7 @@ class ARPP(object):
                 # get the task name and execute the task; if it's the exit command, make sure to end all running threads
                 task_name = list(self.TASK_DICT.keys())[command]
                 task = self.TASK_DICT[task_name]
+                print(task==sys.exit)
                 if task == sys.exit:
                     self.end_all_threads()
                 task()
@@ -601,6 +602,7 @@ class ARPP(object):
         else: # if the user supplies a string command corresponding to a menu option
             try:
                 task = self.TASK_DICT[command]
+                print(task==sys.exit)
                 if task == sys.exit:
                     self.end_all_threads()
                 task()
