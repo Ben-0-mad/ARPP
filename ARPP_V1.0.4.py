@@ -12,6 +12,7 @@ if platform.system() == "Windows":
     import win32serviceutil # to turn on/off IP forwarding on Windows
     
 import datetime
+from collections import OrderedDict
 
 """
 ARP poisoning is the act of altering the ARP table of another device on the network (for malicious purposes)
@@ -54,18 +55,18 @@ class ARPP(object):
         choice of interface, the menu options, and multi threading for arp poisoning 
         """
         self.SELECTED_INTERFACE = None
-        self.TASK_DICT = {"help":parser.print_help,\
-            "scan local network for users":self.get_network_users_ARPSCAN,\
-            "menu":self.print_menu,\
-            "arp poison":self.ARP_poison,\
-            "exit":sys.exit,\
-            "select interface":self.select_interface,\
-            "end a threaded task": self.end_task,\
-            "end all threaded tasks":self.end_all_threads,\
-            "show running threads":self.show_arp_poisoning_threads,\
-            "arp mitm":self.ARP_MITM,\
-            "DNS spoofing":self.DNS_spoof_startup,\
-            "SSL stripping":self.SSLstrip}
+        self.TASK_DICT = OrderedDict([("menu",self.print_menu),\
+            ("help",parser.print_help),\
+            ("scan local network for users",self.get_network_users_ARPSCAN),\
+            ("select interface",self.select_interface),\
+            ("arp poison",self.ARP_poison),\
+            ("arp mitm",self.ARP_MITM),\
+            ("DNS spoofing",self.DNS_spoof_startup),\
+            ("SSL stripping",self.SSLstrip),\
+            ("show running threads",self.show_arp_poisoning_threads),\
+            ("end a threaded task", self.end_task),\
+            ("end all threaded tasks",self.end_all_threads),\
+            ("exit",sys.exit)])
         #self.TASK_DICT = collections.OrderedDict(sorted(self.TASK_DICT_temp.items())) #sorting ditcionary by keys
         self.THREADED_TASKS = []
         self.EVENTS = []
@@ -149,7 +150,7 @@ class ARPP(object):
     def print_menu(self):
         """This method displays the options/actions to choose from
         """
-        task_names = list(set(self.TASK_DICT.keys()))
+        task_names = list(self.TASK_DICT.keys())
         for i, task_name in enumerate(task_names, start=0):
             print("{}: {}".format(i, task_name))
 
@@ -587,7 +588,7 @@ class ARPP(object):
             command = int(command)
             try:
                 # get the task name and execute the task; if it's the exit command, make sure to end all running threads
-                task_name = list(set(self.TASK_DICT.keys()))[command]
+                task_name = list(self.TASK_DICT.keys())[command]
                 task = self.TASK_DICT[task_name]
                 if task == sys.exit:
                     self.end_all_threads()
