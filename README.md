@@ -9,8 +9,8 @@ When entering into the Oracle VM Administrator, we need to modify the configurat
 ## Execution
 - Open all three machines
 - Open a terminal in M3:
-    - Go to the folder where the project is saved: "cd ARPP"
-    - Execute the lastest version of the project: "sudo python ARPP_V!.0.4.py"
+    - Go to the folder where the project is saved: 'cd ARPP'
+    - Execute the lastest version of the project: 'sudo python ARPP_V!.0.4.py'
     - Now, we can see the menu of the possible actions to do:
         - menu: show all the actions
         - 
