@@ -596,9 +596,6 @@ class ARPP(object):
                 task()
             except IndexError as e:
                 print("[-] Command not found\n")
-            except:
-                tb = traceback.format_exc()
-                print(tb)
         else: # if the user supplies a string command corresponding to a menu option
             try:
                 task = self.TASK_DICT[command]
