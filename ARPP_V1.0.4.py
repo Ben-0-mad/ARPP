@@ -831,7 +831,7 @@ class SSLstripping(object):
         # global initial_http
         # global sslstrip
         if TCP in packet:
-            print("got packet from {}".format(packet[TCP].psrc))
+            print("got packet from {}".format(packet[Ether].src))
 
         if TCP in packet and Raw in packet:
             raw_payload = packet[Raw].load
