@@ -735,7 +735,7 @@ class SSLstripping(object):
     """
     def __init__(self, selected_interface):
         self.SELECTED_INTERFACE = selected_interface
-        self.initial_http
+        self.initial_http = True
     
     # def modify_request(self, packet):
     #     # Retrieve the HTTP request layer
