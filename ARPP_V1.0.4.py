@@ -12,6 +12,7 @@ import threading
 import platform # to support windows and linux
 if platform.system() == "Windows":
     import win32serviceutil # to turn on/off IP forwarding on Windows
+    from scapy.arch.windows import *
     
 import datetime
 from collections import OrderedDict
